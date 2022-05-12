@@ -1,0 +1,33 @@
+#Master{
+}
+#SideBar {
+  max-height: 30vh;
+  background-color: blueviolet;
+  list-style: none;
+}
+#ContentPage {
+  background-color: brown;
+}
+
+
+#NetherPortals{
+
+}
+#Row1 {
+  padding: 1%;
+}
+#Row2 {
+  padding: 1%;
+}
+#Notes {
+  background-color: white;
+}
+
+#ImageScroll {
+  max-height: 45vh;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+#die{
+}

@@ -148,6 +148,7 @@ func whitelist(w http.ResponseWriter, r *http.Request) {
 	////db.Close()
 
 	//w.Write(messageJSONx(idKeys))
+
 	type Member struct {
 		Id      string
 		Member  string

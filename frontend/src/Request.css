@@ -55,6 +55,27 @@ body {
     transition-duration: .2s;
 }
 
+.allboxes {
+}
+
+#abox {
+}
+.fakecard {
+  background-color: white;
+}
+
+.removepad {
+  padding: 100px
+}
+.Master {
+}
+.morexla {
+  margin: 0;
+  padding-right: 12px;
+  padding-left: 12px;
+  border: 3px
+}
+
 
 body {
     background-color: 

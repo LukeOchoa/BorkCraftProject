@@ -1,5 +1,14 @@
 import React, {useEffect, useState} from 'react';
 import Container from 'react-bootstrap/Container'
+
+/* Material UI Imports ... */
+import ImageList from '@mui/material/ImageList'
+import ImageListItem from '@mui/material/ImageListItem'
+import TextField from '@mui/material/TextField';
+
+import Typography from '@mui/material/Typography';
+import Modal from '@mui/material/Modal';
+
 import './Request.css'
 
 
@@ -10,18 +19,16 @@ const Request = () => {
     const [ selectedMenu, setSelectedMenu ] = useState('')
 
     return (
-        <Container fluid>
-                <div className="col row flex-nowrap align-items-start">
+        <Container fluid className="Master">
+            <div className="col row flex-nowrap align-items-start">
 
                     <div className="col-2 sticky-top px-sm-2 px-0 bg-dark rounded-3"> 
                         <div className="px-3 pt-2 text-white" >
                                 <Sidebar setSelectedMenu={setSelectedMenu}/>
                         </div>
-                    </div>
+                </div>
 
-                    <div className="d-flex TABLE-LIST-display">
-                        <SelectedMenu selectedMenu={selectedMenu} />
-                    </div>
+                    <SelectedMenu selectedMenu={selectedMenu} />
 
                 </div>
         </Container>
@@ -56,8 +63,127 @@ const SelectedMenu = ({selectedMenu}) => {
 
 const NetherPortals = () => {
     return (
-        <header>¯\_(ツ)_/¯ Nether Portals route is currently empty ¯\_(ツ)_/¯ </header>
+    <div>
+      <div className='row flex-nowrap'>
+
+        <div className='row'>
+        <div id='abox'
+             className='col co-ordinates abox-content'>
+        <TextField 
+          fullWidth
+          variant='filled' 
+          value='x:999 y:999 z:999 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' 
+          focused>
+        </TextField> {/*onClick for memberr that authorizes change: Allow Change*/}
+        </div>
+
+        <div id='abox' 
+             className='col locale abox-content'>
+          <TextField
+            fullWidth
+            variant='filled'
+            value='Near Spawn Point xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+            focused>
+          </TextField>
+        </div>
+
+        <div id='abox' 
+             className='col-3 owner abox-content'>
+          <TextField
+            fullWidth
+            variant='filled'  
+            value='Lunailah xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+            focused>
+          </TextField>
+        </div>
+      </div>
+      </div>
+
+      <div className='row flex-nowrap morexla'>
+
+      <MyPictures /> 
+
+        <div className='col fakecard' >
+          random div crap
+              <br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>
+            Do i need to import more mui?
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+     // <header>¯\_(ツ)_/¯ Nether Portals route is currently empty ¯\_(ツ)_/¯ </header>
     )
+}
+
+const MyModal = (props) => {
+  const [ open, setOpen ]= useState(false)
+  const handleClose = () => setOpen() /* i hacked this pretty badly? fix in the future when you know what you are doing lol #frontendSucksAndSoDoesSnakeCase #Underscores_For_Life */
+  const handleClick = () => {
+    console.log('You lickylick-ied twice... teehee!!!')
+    props.setModalAndImage({modal: false})
+  }
+  if (props.modalAndImage.modal) {
+    return (
+      <div>
+        <Modal
+          open={props.modalAndImage.modal}
+          onClose={handleClose}
+          aria-labelledby="modal-modal-title"
+          aria-describedby="modal-modal-description"
+        >
+            <Typography id="modal-modal-description" align='center' sx={{ mt: 2 }} >
+              <img src={`${props.modalAndImage.img}`}
+              onClick={handleClick}
+              />
+            </Typography>
+        </Modal>
+      </div>
+    )
+  } else {
+    return (
+      <div></div>
+    )
+  }
+}
+
+const MyPictures = () => {
+  const [ modalAndImage, setModalAndImage ] = useState({modal: false, img: 'x'})
+  const pictures = [
+      {
+        img: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Hummingbird.jpg',
+        title: 'ThE BirB'
+      },
+      {
+        img: 'https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg',
+        title: 'ThE DoggO'
+      },
+  
+    ]
+  const handleClick = (picture) => {
+    setModalAndImage({modal: true, img: picture})
+  }
+  return (
+      <div className='col-auto birb'>
+        <ImageList sx={{ maxWidth: 500, maxHeight: 500 }} cols={0} >
+          {pictures.map((picture) => (
+            <ImageListItem key={picture.img}>
+              <img src={`${picture.img}`}
+                   srcSet={`${picture.img}`}
+                   alt={picture.title}
+                   loading='lazy'
+                   onClick={() => handleClick(picture.img)}
+              />
+            </ImageListItem>
+
+          ))}
+        </ImageList>
+        <MyModal modalAndImage={modalAndImage} setModalAndImage={setModalAndImage}/>
+      </div>
+  )
 }
 
 const EndPortals = () => {
@@ -98,7 +224,7 @@ const Integration = () => {
 
 const Accounts = () => {
     return (
-        <header>¯\_(ツ)_/¯ Accounts route is currently empty ¯\_(ツ)_/¯ </header>
+        <header>¯\_(ツ)_/¯ Accounts route is currently empty ¯\_(ツ)_/¯ </header> 
     )
 }
 
