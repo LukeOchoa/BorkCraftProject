@@ -11,14 +11,14 @@ import './Request2.css'
 const Request2 = () => {
 
   const [ selectedMenu, setSelectedMenu ] = useState('')
-  console.log(selectedMenu)
+  const [ hoverMenu, setHoverMenu ] = useState('')
 
   return(
   <Container fluid className="Master">
       <div id='Master' className='row list-unstyled'>
 
-        <NewSideBar setSelectedMenu={setSelectedMenu}/>
-        <SelectedMenu selectedMenu={selectedMenu} />
+        <NewSideBar setSelectedMenu={setSelectedMenu} setHoverMenu={setHoverMenu}/>
+        <SelectedMenu selectedMenu={selectedMenu} hoverMenu={hoverMenu}/>
 
       </div>
   </Container>
@@ -34,7 +34,7 @@ const NetherPortals = () => {
   )
 }
 
-const NewSideBar = ({setSelectedMenu}) => {
+const NewSideBar = (props) => {
   const [ list, setList ] = useState('')
   const [ style, setStyle ] = useState('')
   const menus = [
@@ -48,30 +48,42 @@ const NewSideBar = ({setSelectedMenu}) => {
         { key: 8, name: "integration"},
         { key: 9, name: "accounts"},
   ]
+
   const handleClick = (name) => {
     if (name === list) {
-        setSelectedMenu('')
+        props.setSelectedMenu('')
         setList('unclicked')
         setStyle('')
     } else {
-        setSelectedMenu(name)
+        props.setSelectedMenu(name)
         setList(name)
         setStyle('SideBarHover')
     }
   }
+
+  const handleHoverOver = (name) => {
+      props.setHoverMenu(name)
+
+    }
+  const handleHoverOut = () => {
+    props.setHoverMenu('')
+  }
+
   const setCSS = (name) => {
     if (name === list) {
       return style
     }
   }
-  console.log(style)
   return (
         <div id='SideBar' className="col-2 sticky-top px-sm-2 bg-dark rounded-3 text-white">
           <div className="px-3 pt-2">
         {
             menus.map(menu => {
-                return <li id="lis" className={`${menu.name} ${setCSS(menu.name)}`} key={menu.key.toString()}
+                return <li id="lis" 
+                        className={`${menu.name} ${setCSS(menu.name)}`} key={menu.key.toString()}
                         onClick={() => handleClick(menu.name)}
+                        onMouseOver={() => handleHoverOver(menu.name)}
+                        onMouseOut={() => handleHoverOut(menu.name)}
                 >{menu.name}</li>
             })
         }
@@ -258,8 +270,14 @@ const Accounts = () => {
 
 
 
-const SelectedMenu = ({selectedMenu}) => {
-    switch (selectedMenu) {
+const SelectedMenu = (props) => {
+    let theMenu =''
+    if (props.hoverMenu == '') {
+      theMenu = props.selectedMenu
+    } else {
+      theMenu = props.hoverMenu
+    }
+    switch (theMenu) {
         case "members list":
             return (<MemberList />)
         case 'nether portals':
