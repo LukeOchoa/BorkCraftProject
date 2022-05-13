@@ -1,8 +1,10 @@
 import React from "react";
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import Container from 'react-bootstrap/Container';
-
+/* MUI Imports */
 import TextField from '@mui/material/TextField'
+import Modal from '@mui/material/Modal'
+import Typography from '@mui/material/Typography';
 
 import './Request2.css'
 
@@ -25,14 +27,6 @@ const Request2 = () => {
   )
 }
 
-const NetherPortals = () => {
-  return(
-    <div id='Content' className="col text-center">
-      <ContentOverWorld />
-      <ContentNether />
-    </div>        
-  )
-}
 
 const NewSideBar = (props) => {
   const [ list, setList ] = useState('')
@@ -92,40 +86,14 @@ const NewSideBar = (props) => {
   )
 } 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-const SideBar = () => {
-  return (
-    <div id='SideBar' className="col sticky-top">
-      Sidebar Items
-      <li id='lis'>Menu A</li>
-      <li id='lis'>Menu B</li>
-      <li id='lis'>Menu C</li>
-      <li id='lis'>Menu D</li>
-      <li id='lis'>Menu E</li>
-      <li id='lis'>Menu F</li>
-      <li id='lis'>Menu G</li>
-    </div>
+const NetherPortals = () => {
+  return(
+    <div id='Content' className="col text-center">
+      <ContentOverWorld />
+      <ContentNether />
+    </div>        
   )
 }
-*/
-
 
 
 const ContentOverWorld = () => {
@@ -148,6 +116,26 @@ const ContentNether = () => {
 
 
 const PortalsTemplate = () => {
+  const [ clickEvent, setClickEvent ] = useState(false)
+  const [ img, setImg ] = useState('')
+  const images = [
+    {
+      img: 'https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg',
+      title: 'The DoggO'
+    },
+    {
+      img: 'https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg',
+      title: 'The DoggO'
+    },
+    /*{
+      img: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Hummingbird.jpg',
+      title: 'ThE BirB'
+    },*/
+  ]
+  function handleImageClick(booly, img) {
+    setClickEvent(booly)
+    setImg(img)
+  }
   return (
     <div id='NetherPortals' className=''>
       <div id="Row1" className="row">
@@ -169,19 +157,18 @@ const PortalsTemplate = () => {
       <div id="Row2" className="row">
 
         <div id='ImageScroll' className='col-md-4'>  
-
-          <div>
-            <img className="img-fluid" id='die' src="https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg"/>
-          </div>
-
-          <div> 
-            <img className="img-fluid" id='die' src="https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg" />
-          </div>
-  
-          <div>
-            <img className="img-fluid" id='die' src="https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg" />
-          </div>
-
+          {
+            images.map((image) => (
+            <div>
+              <img src={`${image.img}`}
+                   key={`${image.title}`}
+                   className='img-fluid'
+                   onClick={() => handleImageClick(true, image.img)}
+                />
+            </div>
+            ))
+          }
+          <MyModal clickEvent={clickEvent} setClickEvent={setClickEvent} img={img} />
         </div>
 
         <div id='Notes' className="col">
@@ -193,6 +180,32 @@ const PortalsTemplate = () => {
   )
 }
 
+const MyModal = (props) => {
+    const [open, setOpen ] = useState(false)
+    const handleClose = () => setOpen()
+    const handleClick = () => {
+      console.log('You clicked inside modal')
+      props.setClickEvent(false)
+    }
+    return (
+      <Modal
+        open={props.clickEvent}
+        onClose={handleClose}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Typography id='modal-modal-description'
+                    align='center'
+                    justify='center'
+                    sx={{ mt: 2 }}
+        >
+          <img src={`${props.img}`}
+              onClick={handleClick}
+          />
+        </Typography>
+      </Modal>
+    )
+}
 export default Request2
 
 
@@ -218,13 +231,13 @@ export default Request2
 
 
 
-
+/*
 const MemberList = () => {
   return (
         <header>¯\_(ツ)_/¯ Member List route is currently empty ¯\_(ツ)_/¯ </header>
   )
 }
-
+*/
 
 const EndPortals = () => {
     return (
@@ -314,9 +327,9 @@ const SelectedMenu = (props) => {
 
 
 
-/*
 
-const MemberTab = () => {    
+
+const MemberList = () => {    
     const [ whitelist, setWhitelist ] = useState({})
     const [ isWhiteListSet, setIsWhiteListSet ] = useState(false)
     const [ onHoverMember, setOnHoverMember ] = useState('')
@@ -400,8 +413,8 @@ const MemberTab = () => {
                     <p key={item.Id}>{item.Member}&emsp;{item.Servers}<br></br></p>
                     </header>
                     <div className={`${setCss(item.Member)}`}
-                    onMouseOver={() => handleHover(item.Member)}
-                    onMouseOut={() => handleHoverOut()}
+                    /*onMouseOver={() => handleHover(item.Member)}
+                    onMouseOut={() => handleHoverOut()}*/
                     >Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div> 
 
                     </div>
@@ -417,4 +430,4 @@ const MemberTab = () => {
 }
 
 
-*/
+
