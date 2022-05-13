@@ -1,33 +1,41 @@
 #Master{
 }
 #SideBar {
-  max-height: 30vh;
-  background-color: blueviolet;
-  list-style: none;
+background-color: blueviolet;
+list-style: none;
+}
+.SideBarHover {
+  box-shadow: 5px 6px 6px 2px black;
+  transform: scale(1.1);
 }
 #ContentPage {
-  background-color: brown;
+background-color: brown;
 }
 
-
-#NetherPortals{
-
-}
 #Row1 {
-  padding: 1%;
+padding: 1%;
 }
 #Row2 {
-  padding: 1%;
+padding: 1%;
 }
 #Notes {
-  background-color: white;
+background-color: white;
+}
+#ImageScroll {
+max-height: 45vh;
+overflow-x: hidden;
+overflow-y: scroll;
+scrollbar-width: none;
 }
 
-#ImageScroll {
-  max-height: 45vh;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  scrollbar-width: none;
+
+/* className(s) */
+.lis {
+  transition: all 0.2 ease;
+  cursor: pointer;
 }
-#die{
+
+.lis:hover{
+  box-shadow: 5px 6px 6px 2px black;
+  transform: scale(1.1);
 }
