@@ -1,8 +1,11 @@
 import { BrowserRouter as Router, Routes, Route} from 'react-router-dom'
-import { createRoot } from 'react-dom/client';
+/* import { createRoot } from 'react-dom/client'; */
+import ReactDOM, { render } from 'react-dom';
 import "./index.css";
 import 'bootstrap/dist/css/bootstrap.min.css'
 import './App.scss';
+import { store } from './store';
+import { Provider } from 'react-redux';
 
 
 
@@ -35,6 +38,13 @@ function App() {
 
 
 //  ============================ 
-const root = document.getElementById('root')
-const ReactRoot = createRoot(root)
-ReactRoot.render(<App />)
+//const root = document.getElementById('root')
+//const ReactRoot = createRoot(root)
+//ReactRoot.render(<App />)
+
+ReactDOM.render(
+    <Provider store={store}>
+      <App />
+    </Provider>,
+    document.getElementById('root')
+);

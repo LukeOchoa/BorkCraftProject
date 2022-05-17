@@ -27,15 +27,16 @@ overflow-x: hidden;
 overflow-y: scroll;
 scrollbar-width: none;
 }
-
+.textfield {
+}
 
 /* className(s) */
 .lis {
   transition: all 0.2 ease;
   cursor: pointer;
 }
-
 .lis:hover{
   box-shadow: 5px 6px 6px 2px black;
   transform: scale(1.1);
 }
+

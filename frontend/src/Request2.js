@@ -1,6 +1,16 @@
 import React from "react";
 import {useState, useEffect} from 'react';
+
+/* Redux Toolkit Imports */
+import { useSelector, useDispatch } from "react-redux";
+import { allowPageUpdate, loggy, updateNetherPortalsForm, hasThisBeenRenderedBeforeFunc } from './reduxLogic';
+
+/* React-Bootstrap Imports */
 import Container from 'react-bootstrap/Container';
+import Button from 'react-bootstrap/Button';
+import Dropdown from 'react-bootstrap/Dropdown';
+
+
 /* MUI Imports */
 import TextField from '@mui/material/TextField'
 import Modal from '@mui/material/Modal'
@@ -14,6 +24,15 @@ const Request2 = () => {
 
   const [ selectedMenu, setSelectedMenu ] = useState('')
   const [ hoverMenu, setHoverMenu ] = useState('')
+
+ /* 
+  const stringo = useSelector((state) => 
+    state.netherPortalsForms.formDataOverWorld
+  )
+  const dispatch = useDispatch()
+  console.log(stringo, 'stringo goes here')
+ */
+
 
   return(
   <Container fluid className="Master">
@@ -39,8 +58,7 @@ const NewSideBar = (props) => {
         { key: 5, name: "shops"},
         { key: 6, name: "cool stuff"},
         { key: 7, name: "message board"},
-        { key: 8, name: "integration"},
-        { key: 9, name: "accounts"},
+        { key: 8, name: "integration"}, { key: 9, name: "accounts"},
   ]
 
   const handleClick = (name) => {
@@ -69,8 +87,7 @@ const NewSideBar = (props) => {
     }
   }
   return (
-        <div id='SideBar' className="col-2 sticky-top px-sm-2 bg-dark rounded-3 text-white">
-          <div className="px-3 pt-2">
+        <div id='SideBar' className="col-2 sticky-top px-sm-2 bg-dark rounded-3 text-white"> <div className="px-3 pt-2">
         {
             menus.map(menu => {
                 return <li id="lis" 
@@ -87,20 +104,31 @@ const NewSideBar = (props) => {
 } 
 
 const NetherPortals = () => {
+
+  function handleClose() {
+    console.log('execute')
+  }
   return(
     <div id='Content' className="col text-center">
+    <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          console.log(e.target)
+          handleClose()
+        }}
+    >  
       <ContentOverWorld />
       <ContentNether />
+    </form>
     </div>        
   )
 }
 
-
 const ContentOverWorld = () => {
   return (
   <div id='ContentPage' className='row p-2'>
-      <header>Over World Co-ordinates</header>
-      <PortalsTemplate/>
+      <ButtonBar />
+      <PortalsTemplate />
   </div>
   )
 } 
@@ -114,10 +142,85 @@ const ContentNether = () => {
   )
 }
 
+const ButtonBar = () => {
+
+  const [ showDropdown, setShowDropdown ] = useState(false)
+  const dispatch = useDispatch()
+  return (
+    <div> 
+
+      <header className="hx">Over World Co-ordinates</header>
+      <div className='row p-2'>
+        <Button className='col btn btn-dark btn-sm' onClick={() => dispatch(allowPageUpdate())}>augment</Button>
+        <Button className='col btn btn-dark btn-sm' type='submit'>submit</Button>
+
+        <div className='col'
+             onMouseOver={() => setShowDropdown(true)}
+             onMouseOut={() => setShowDropdown(false)}
+        >
+        <Dropdown id='Dropdown' className='row'>
+          
+          <Dropdown.Toggle variant='success' id='' size='sm'>
+            Dropdown Button
+          </Dropdown.Toggle>
+
+          <Dropdown.Menu  show={showDropdown} >
+            <Dropdown.Item href="#/action-1">Action</Dropdown.Item>
+            <Dropdown.Item href="#/action-2">Another action</Dropdown.Item>
+            <Dropdown.Item href="#/action-3">Something else</Dropdown.Item>
+          </Dropdown.Menu>
+
+        </Dropdown>
+        </div>
+      
+      </div>
+
+    </div>
+  )
+}
+
+// Current Death
+const updatePortalsTemplate = async (dispatch) => {
+    try {
+      const response = await fetch(
+        "http://localhost:8080/NetherPortals", {
+          method: 'GET',
+          mode: 'cors',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },})
+      const liveNetherPortals = await response.json()
+      dispatch(updateNetherPortalsForm(liveNetherPortals.AllNetherPortals))
+    } catch (e) {
+      console.log(e)
+    }
+}
 
 const PortalsTemplate = () => {
+  /*
+  const formDataOverWorld = useSelector((state) => state.netherPortalsForms.allNetherPortals) 
+  const formDataNether = useSelector((state) => state.netherPortalsForms.allNetherPortals)
+  */
+  /*const allNetherPortals2 = useSelector((state) =>  state.netherPortalsForms.allNetherPortals) */
+
+
+  const dispatch = useDispatch()
+
   const [ clickEvent, setClickEvent ] = useState(false)
   const [ img, setImg ] = useState('')
+  const [ inputProps, setInputProps ] = useState(true)
+
+  const hasThisBeenRenderedBefore = useSelector((state) => state.NetherPortals.hasThisBeenRenderedBefore)
+  useEffect(async () => {
+    if (hasThisBeenRenderedBefore === false) {
+      updatePortalsTemplate(dispatch)
+    }
+  }, [])
+  if (!hasThisBeenRenderedBefore) {
+    dispatch(hasThisBeenRenderedBeforeFunc())
+  }
+
   const images = [
     {
       img: 'https://live.staticflickr.com/5088/5323961120_0172112bcb_b.jpg',
@@ -132,24 +235,53 @@ const PortalsTemplate = () => {
       title: 'ThE BirB'
     },*/
   ]
+
   function handleImageClick(booly, img) {
     setClickEvent(booly)
     setImg(img)
   }
+  const placeholder = 1
+  const augmentPage = useSelector((state) => state.NetherPortals.augment)
   return (
     <div id='NetherPortals' className=''>
       <div id="Row1" className="row">
 
-        <TextField className="col"
-          value='x:999 y:999 z:999 1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' 
+        <TextField id='xcord' className="col p-2"
+          variant='standard'
+          defaultValue={`x-cord: ${placeholder}`}
+          InputProps={{
+            readOnly: augmentPage,
+          }}
+        ></TextField>
+        <TextField id='ycord' className='col p-2'
+          variant='standard'
+          defaultValue={`y-cord: ${placeholder}`}
+          InputProps={{
+            readOnly: augmentPage, 
+          }}
+        ></TextField>
+        <TextField id='zcord' className='col p-2'
+          variant='standard'
+          defaultValue={`z-cord: ${placeholder}`}
+          InputProps={{
+            readOnly: useSelector((state) => state.NetherPortals.augment),
+          }}
         ></TextField>
         
-        <TextField className="col"
-          value='x:999 y:999 z:999 2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' 
+        <TextField className="col p-2 textfield"
+          variant='standard'
+          defaultValue='locale'
+          InputProps={{
+            readOnly: useSelector((state) => state.NetherPortals.augment),
+          }}
         ></TextField>
 
-        <TextField className="col"
-          value='x:999 y:999 z:999 3xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' 
+        <TextField className="col p-2"
+          variant='standard'
+          defaultValue='owner'
+          InputProps={{
+            readOnly: useSelector((state) => state.NetherPortals.augment),
+          }}
         ></TextField>
 
       </div>
@@ -181,7 +313,7 @@ const PortalsTemplate = () => {
 }
 
 const MyModal = (props) => {
-    const [open, setOpen ] = useState(false)
+    const [ open, setOpen ] = useState(false)
     const handleClose = () => setOpen()
     const handleClick = () => {
       console.log('You clicked inside modal')
@@ -207,29 +339,6 @@ const MyModal = (props) => {
     )
 }
 export default Request2
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /*
 const MemberList = () => {
@@ -281,8 +390,6 @@ const Accounts = () => {
     )
 }
 
-
-
 const SelectedMenu = (props) => {
     let theMenu =''
     if (props.hoverMenu == '') {
@@ -314,20 +421,6 @@ const SelectedMenu = (props) => {
             return (<div>YOU FOUND A BUGG?</div>)
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const MemberList = () => {    
     const [ whitelist, setWhitelist ] = useState({})
@@ -428,6 +521,3 @@ const MemberList = () => {
         )
     }
 }
-
-
-
