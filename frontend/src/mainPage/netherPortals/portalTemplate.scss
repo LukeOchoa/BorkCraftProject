@@ -1,0 +1,10 @@
+.xlatrue {
+    white-space: nowrap;
+    overflow: hidden;
+}
+.xlatrue:hover{
+    background-color: blue;
+    white-space: pre-line;
+    max-width: 10vw;
+    z-index: 2;
+}

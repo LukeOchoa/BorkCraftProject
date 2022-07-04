@@ -3,13 +3,7 @@ import {useState, useEffect} from 'react';
 
 /* Redux Toolkit Imports */
 import { useSelector, useDispatch } from "react-redux";
-import { allowPageUpdate, 
-         loggy, 
-         updateNetherPortalsForm, 
-         hasThisBeenRenderedBeforeFunc, 
-         stageOnChanges, 
-         updateChosenNetherPortal,
-         stateOnChanges2 } from './reduxLogic';
+import { allowPageUpdate, loggy, updateNetherPortalsForm, hasThisBeenRenderedBeforeFunc } from './reduxLogic';
 
 /* React-Bootstrap Imports */
 import Container from 'react-bootstrap/Container';
@@ -23,8 +17,6 @@ import Modal from '@mui/material/Modal'
 import Typography from '@mui/material/Typography';
 
 import './Request2.css'
-import SideBar from './mainPage/SideBar'
-import MemberList from './mainPage/MemberList'
 
 
 /* Main Function */
@@ -46,7 +38,7 @@ const Request2 = () => {
   <Container fluid className="Master">
       <div id='Master' className='row list-unstyled'>
 
-        <SideBar setSelectedMenu={setSelectedMenu} setHoverMenu={setHoverMenu}/>
+        <NewSideBar setSelectedMenu={setSelectedMenu} setHoverMenu={setHoverMenu}/>
         <SelectedMenu selectedMenu={selectedMenu} hoverMenu={hoverMenu}/>
 
       </div>
@@ -54,7 +46,7 @@ const Request2 = () => {
   )
 }
 
-/*
+
 const NewSideBar = (props) => {
   const [ list, setList ] = useState('')
   const [ style, setStyle ] = useState('')
@@ -110,7 +102,6 @@ const NewSideBar = (props) => {
         </div>
   )
 } 
-*/
 
 const NetherPortals = () => {
 
@@ -137,7 +128,7 @@ const ContentOverWorld = () => {
   return (
   <div id='ContentPage' className='row p-2'>
       <ButtonBar />
-      <PortalsTemplate templateType={'OverWorld'}/>
+      <PortalsTemplate />
   </div>
   )
 } 
@@ -146,7 +137,7 @@ const ContentNether = () => {
   return (
   <div id='ContentPage' className='row p-2'>
       <header>Nether Co-ordinates</header>
-      <PortalsTemplate templateType={'Nether'}/>
+      <PortalsTemplate/>
   </div>
   )
 }
@@ -154,20 +145,18 @@ const ContentNether = () => {
 const ButtonBar = () => {
 
   const [ showDropdown, setShowDropdown ] = useState(false)
-  const array1 = useSelector((state) => {
+  const array = useSelector((state) => {
     let x = state.NetherPortals.allNetherPortals
-    let tempArr = [];
-    /*for (const key of x) { */
-    for (var index = 0; index<x.length; index++) {
-      const key = x[index]
+    console.log('CAP')
+    for (const key of x) {
       for (var key2 in key) {
-        if (key2 != 'Id') {
-          var tempArr2 = [index, "[Pair ", key.Id, "]", key2, " x: ", key[key2].Xcord, " y: ", key[key2].Ycord, " z: ", key[key2].Zcord]
-          tempArr.push(tempArr2)
-        }
+        console.log(key[key2])
       }
+      /*for (const key2 of key) {
+        console.log(key2)
+      }*/
     }
-    return tempArr
+    console.log('CAP')
   })
   const dispatch = useDispatch()
   return (
@@ -179,26 +168,20 @@ const ButtonBar = () => {
         <Button className='col btn btn-dark btn-sm' type='submit'>submit</Button>
 
         <div className='col'
-             onMouseEnter={() => setShowDropdown(true)}
-             onMouseLeave={() => setShowDropdown(false)}
-             onClick={() => setShowDropdown(!showDropdown)}
+             onMouseOver={() => setShowDropdown(true)}
+             onMouseOut={() => setShowDropdown(false)}
         >
-          {/* THIS DOESNOT WORK RIGHT */}
-        <Dropdown id='Dropdown' className='row' drop={''}>
+        <Dropdown id='Dropdown' className='row'>
           
-          <Dropdown.Toggle variant='success' id='' size='sm' >
+          <Dropdown.Toggle variant='success' id='' size='sm'>
             Dropdown Button
           </Dropdown.Toggle>
-          
-          <div>
-          <Dropdown.Menu  show={showDropdown} className='my-dropdown'>
-            {
-              array1.map((item) => (
-              <Dropdown.Item onClick={() => dispatch(updateChosenNetherPortal( [item[0], item[2]] ))}>{item}</Dropdown.Item>
-              ))
-            }
+
+          <Dropdown.Menu  show={showDropdown} >
+            <Dropdown.Item href="#/action-1">Action</Dropdown.Item>
+            <Dropdown.Item href="#/action-2">Another action</Dropdown.Item>
+            <Dropdown.Item href="#/action-3">Something else</Dropdown.Item>
           </Dropdown.Menu>
-          </div>
 
         </Dropdown>
         </div>
@@ -227,7 +210,7 @@ const updatePortalsTemplate = async (dispatch) => {
     }
 }
 
-const PortalsTemplate = (props) => {
+const PortalsTemplate = () => {
   /*
   const formDataOverWorld = useSelector((state) => state.netherPortalsForms.allNetherPortals) 
   const formDataNether = useSelector((state) => state.netherPortalsForms.allNetherPortals)
@@ -236,10 +219,6 @@ const PortalsTemplate = (props) => {
 
 
   const dispatch = useDispatch()
-
-  const xma = useSelector((state) => state.NetherPortals.selectedNetherPortal[1])
-  console.log('XMA GOES HERE ()()()', xma)
-  const table = useSelector((state) => state.NetherPortals.allNetherPortals)
 
   const [ clickEvent, setClickEvent ] = useState(false)
   const [ img, setImg ] = useState('')
@@ -269,139 +248,23 @@ const PortalsTemplate = (props) => {
       title: 'ThE BirB'
     },*/
   ]
-  const seelNether = useSelector((state) => state.NetherPortals.selectedNetherPortal[1])
-  const handleChange = (change, x, y) => {
-    /*
-     var rval 
-      for (const item of state.testObj) {
-        console.log('immer item?', item, state.testObj, state.allNetherPortals)
-        if (state.testObj[item]['Id'] == state.selectedNetherPortal)
-          rval = item
-      }
-      state.testObj[rval][key][key2] = newChange.payload
-    */
-    var copyboi = structuredClone(breakMe)
-    var rval
-    var t
-    console.log('breakMe', breakMe)
-    for (var xtem = 0; xtem < breakMe.length; xtem++) {
-      if (breakMe[xtem]['Id'] === seelNether) {
-        copyboi[xtem].Nether.Xcord = change
-        rval = xtem
-      }
-    }
 
-    dispatch(stageOnChanges(change))
-    dispatch(stateOnChanges2(copyboi))
-    console.log("did this change?" , breakMe, copyboi)
-    /*console.log('whole point', breakMe[rval[x]][y], )*/
-  }
   function handleImageClick(booly, img) {
     setClickEvent(booly)
     setImg(img)
   }
   const placeholder = 1
   const augmentPage = useSelector((state) => state.NetherPortals.augment)
-  const breakMe = useSelector((state) => state.NetherPortals.testObj)
-  let breakChild = getTable(breakMe)
-  var port = getTable(table)
-  if (port == undefined) {
-    port = {id: 'skin'}
-
-  }
-
-  const objectOverWorld = [
-    {id: 'xcord',  defaultValue: 'x-cord', objectKey: 'Xcord' },
-    {id: 'ycord',  defaultValue: 'y-cord', objectKey: 'Ycord' },
-    {id: 'zcord',  defaultValue: 'z-cord', objectKey: 'Zcord' },
-    {id: 'locale', defaultValue: 'locale', objectKey: 'Locale', },
-    {id: 'owner',  defaultValue: 'owner',  objectKey: 'Owner' , },
-  ]
-  const objectNether = [ 
-      {id: 'xcord',  defaultValue: 'x-cord', objectKey: 'Xcord' , },
-      {id: 'ycord',  defaultValue: 'y-cord', objectKey: 'Ycord' , },
-      {id: 'zcord',  defaultValue: 'z-cord', objectKey: 'Zcord' , },
-      {id: 'locale', defaultValue: 'locale', objectKey: 'Locale', },
-      {id: 'owner',  defaultValue: 'owner',  objectKey: 'Owner' , },
-   ]
-  let textFields
-  let breakKey = props.templateType
-
-  console.log('props', props)
-  if (props.templateType === 'OverWorld') {
-    textFields = objectOverWorld
-  }
-  if (props.templateType === 'Nether') {
-    textFields = objectNether
-  }
-
-  function getTable(tables) {
-    for (const index of tables)  {
-        console.log("THE new XMA", xma)
-        if (xma == index.Id) {
-        return index
-      }
-    }
-  }
-  /*
-  textFields.map((item) => {
-    console.log("here is mappy", item)
-  })*/
-  /*
-  for (const key of textFields) {
-      <TextField
-        id={`${key.id}`}
-        className='col p-2'
-        defaultValue={`${key.defaultValue}`}
-        InputProps={{
-          readOnly: augmentPage
-        }}
-        onChange={(e) => handleChange(e.target.value)}
-      >
-      </TextField>
-  } */
-  const handleDefaultValue = (loadedDefault, newDefault) => {
-     
-  }
-  const newc = useSelector((state) => state.NetherPortals.testObj)
-  console.log('testObj', useSelector((state) => state.NetherPortals.testObj), useSelector((state) => state.NetherPortals.allNetherPortals))
-  if (breakChild == undefined)  {
-    console.log("WHY DID YOU TRIGGER")
-    return(
-    <div></div>
-    )
-  } else {
-
-
-  /*${key.p.id} */
   return (
     <div id='NetherPortals' className=''>
       <div id="Row1" className="row">
-        {
-          textFields.map((key) => (
-          <TextField
-            id={`${key.id}`}
-            className='col p-2'
-            defaultValue={`${key.defaultValue}: ${breakChild[breakKey][key.objectKey]}`}
-            variant='standard'
-            InputProps={{
-              readOnly: augmentPage
-            }}
-            onChange={(e) => handleChange(e.target.value, breakKey, key.objectKey)}
-          ></TextField>
-          ))
-        }
 
-
-
-        {/*
         <TextField id='xcord' className="col p-2"
           variant='standard'
           defaultValue={`x-cord: ${placeholder}`}
           InputProps={{
             readOnly: augmentPage,
           }}
-          onChange={(e) => handleChange(e.target.value)}
         ></TextField>
         <TextField id='ycord' className='col p-2'
           variant='standard'
@@ -433,7 +296,6 @@ const PortalsTemplate = (props) => {
             readOnly: useSelector((state) => state.NetherPortals.augment),
           }}
         ></TextField>
-          */}
 
       </div>
 
@@ -461,7 +323,6 @@ const PortalsTemplate = (props) => {
 
     </div>
   )
-  }
 }
 
 const MyModal = (props) => {
@@ -574,7 +435,6 @@ const SelectedMenu = (props) => {
     }
 }
 
-/*
 const MemberList = () => {    
     const [ whitelist, setWhitelist ] = useState({})
     const [ isWhiteListSet, setIsWhiteListSet ] = useState(false)
@@ -659,6 +519,8 @@ const MemberList = () => {
                     <p key={item.Id}>{item.Member}&emsp;{item.Servers}<br></br></p>
                     </header>
                     <div className={`${setCss(item.Member)}`}
+                    /*onMouseOver={() => handleHover(item.Member)}
+                    onMouseOut={() => handleHoverOut()}*/
                     >Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div> 
 
                     </div>
@@ -672,5 +534,3 @@ const MemberList = () => {
         )
     }
 }
-
-*/

@@ -13,7 +13,6 @@ import './Request.css'
 
 
 
-
 const Request = () => {
 
     const [ selectedMenu, setSelectedMenu ] = useState('')
@@ -361,14 +360,7 @@ const Sidebar = ({setSelectedMenu}) => {
        }
     }
     return (
-        <ul className="list-unstyled">
-        {
-            menus.map(menu => {
-                return <li id="lis" className={`${menu.name} list-unstyled mb-3 ${setCss(menu.name)}`} key={menu.key.toString()}
-                        onClick={() => handleClick(menu.name)}
-                >{menu.name}</li>
-            })
-        }
+        <ul classname="list-unstyled">
         </ul>
     )
 

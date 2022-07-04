@@ -114,100 +114,105 @@ func main() {
 	http.Handle("/logout", corsHandler(http.HandlerFunc(logout)))
 
 	http.Handle("/whitelist", corsHandler(http.HandlerFunc(whitelist)))
-  http.Handle("/NetherPortals", corsHandler(http.HandlerFunc(netherPortals)))
+	http.Handle("/NetherPortals", corsHandler(http.HandlerFunc(netherPortals)))
 
 	http.ListenAndServe(":8080", nil)
 }
 
-
-
 /*
+
+ALTER TABLE netherportals RENAME local_nether to locale_nether
+
  INSERT INTO netherportals(id, xcord_overworld, ycord_overworld, zcord_overworld, xcord_nether, ycord_nether, zcord_nether, local_overworld, owner_overworld, notes_overworld, local_nether, owner_nether, notes_nether)
  values(1, 79, 79, 79, -66, -66, -66, 'Its Onion Knight Gone LOL', 'NetherCraft', 'This PLEASE LIVE is SpanK.', 'Its Nether Gone LOL', 'NetherCraft', 'This GO DIE is DanK');
 
+ INSERT INTO netherportals(id, xcord_overworld, ycord_overworld, zcord_overworld, xcord_nether, ycord_nether, zcord_nether, local_overworld, owner_overworld, notes_overworld, local_nether, owner_nether, notes_nether)
+ values(6, 9, 878, 79, -622, -93, -806, 'Its Onion Knight Gone LOL', 'NetherCraft', 'This PLEASE LIVE is SpanK.', 'Its Nether Gone LOL', 'NetherCraft', 'This GO DIE is DanK');
+
+ INSERT INTO netherportals(id, xcord_overworld, ycord_overworld, zcord_overworld, xcord_nether, ycord_nether, zcord_nether, local_overworld, owner_overworld, notes_overworld, local_nether, owner_nether, notes_nether)
+ values(0, 10999000000000, 10999000000000, 10999000000000, -88888, -88888, -50, 'Its Onion Knight Gone LOL', 'NetherCraft', 'This PLEASE LIVE is SpanK.', 'Its Nether Gone LOL', 'NetherCraft', 'This GO DIE is DanK');
+
  CREATE TABLE netherportals(
-  id INT PRIMARY KEY NOT NULL UNIQUE, 
+  id INT PRIMARY KEY NOT NULL UNIQUE,
 
-  xcord_overworld INT NOT NULL, 
-  ycord_overworld INT NOT NULL, 
-  zcord_overworld INT NOT NULL, 
+  xcord_overworld INT NOT NULL,
+  ycord_overworld INT NOT NULL,
+  zcord_overworld INT NOT NULL,
 
-  xcord_nether INT NOT NULL, 
-  ycord_nether INT NOT NULL, 
-  zcord_nether INT NOT NULL, 
+  xcord_nether INT NOT NULL,
+  ycord_nether INT NOT NULL,
+  zcord_nether INT NOT NULL,
 
-  local_overworld TEXT, 
-  owner_overworld TEXT, 
-  notes_overworld TEXT, 
+  local_overworld TEXT,
+  owner_overworld TEXT,
+  notes_overworld TEXT,
 
-  local_nether TEXT, 
-  owner_nether TEXT, 
+  local_nether TEXT,
+  owner_nether TEXT,
   notes_nether TEXT);
 */
 
-
-
 func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 
-  type Portal struct {
-    Xcord int
-    Ycord int
-    Zcord int
-    Local string
-    Owner string
-    Notes string
-  }
+	type Portal struct {
+		Xcord  int
+		Ycord  int
+		Zcord  int
+		Locale string
+		Owner  string
+		Notes  string
+	}
 
-  type NetherPortal struct {
-    Id int 
-    Nether Portal
-    OverWorld Portal
-  }
-  type AllNetherPortals struct {
-    AllNetherPortals []NetherPortal
-  }
-  var allNetherPortals AllNetherPortals
+	type NetherPortal struct {
+		Id        int
+		Nether    Portal
+		OverWorld Portal
+	}
+	type AllNetherPortals struct {
+		AllNetherPortals []NetherPortal
+	}
+	var allNetherPortals AllNetherPortals
 
-  sql_read := `table netherportals`
-  db := create_DB_Connection()
-  rows, err := db.Query(sql_read)
-  if err != nil {
-    panic(err)
-  }
+	sql_read := `table netherportals`
+	db := create_DB_Connection()
+	rows, err := db.Query(sql_read)
+	if err != nil {
+		panic(err)
+	}
 
-  for rows.Next() {
-    var netherPortal NetherPortal
+	for rows.Next() {
+		var netherPortal NetherPortal
 
-    err = rows.Scan(&netherPortal.Id,
-                    &netherPortal.OverWorld.Xcord,
-                    &netherPortal.OverWorld.Ycord,
-                    &netherPortal.OverWorld.Zcord,
+		err = rows.Scan(&netherPortal.Id,
+			&netherPortal.OverWorld.Xcord,
+			&netherPortal.OverWorld.Ycord,
+			&netherPortal.OverWorld.Zcord,
 
-                    &netherPortal.Nether.Xcord,
-                    &netherPortal.Nether.Ycord,
-                    &netherPortal.Nether.Zcord,
+			&netherPortal.Nether.Xcord,
+			&netherPortal.Nether.Ycord,
+			&netherPortal.Nether.Zcord,
 
-                    &netherPortal.OverWorld.Local,
-                    &netherPortal.OverWorld.Owner,
-                    &netherPortal.OverWorld.Notes,
+			&netherPortal.OverWorld.Locale,
+			&netherPortal.OverWorld.Owner,
+			&netherPortal.OverWorld.Notes,
 
-                    &netherPortal.Nether.Local,
-                    &netherPortal.Nether.Owner,
-                    &netherPortal.Nether.Notes,
-                  )
-    if err != nil {
-      panic(err)
-    }
-    allNetherPortals.AllNetherPortals = append(allNetherPortals.AllNetherPortals, netherPortal)
-  }
-  db.Close()
-  rows.Close()
+			&netherPortal.Nether.Locale,
+			&netherPortal.Nether.Owner,
+			&netherPortal.Nether.Notes,
+		)
+		if err != nil {
+			panic(err)
+		}
+		allNetherPortals.AllNetherPortals = append(allNetherPortals.AllNetherPortals, netherPortal)
+	}
+	db.Close()
+	rows.Close()
 
-  jsonAllNetherPortals, err2 := json.Marshal(allNetherPortals)
-  if err2 != nil {
-    panic(err2)
-  }
-  w.Write(jsonAllNetherPortals)
+	jsonAllNetherPortals, err2 := json.Marshal(allNetherPortals)
+	if err2 != nil {
+		panic(err2)
+	}
+	w.Write(jsonAllNetherPortals)
 
 }
 

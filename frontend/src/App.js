@@ -16,6 +16,8 @@ import Login from './Login';
 import Signup from './Signup';
 import Request from './Request';
 import Request2 from './Request2';
+import MainPage from './MainPage';
+import Servy from './Servy';
 
 
 // Main App
@@ -28,8 +30,10 @@ function App() {
                     <Route path="/borkcraft" element={<Borkcraft />} />
                     <Route path="/login"     element={<Login     />} />
                     <Route path="/signup"    element={<Signup    />} />
-                    <Route path="/request"   element={<Request   />} />  {/* Test Route */}
-                    <Route path="/request2"  element={<Request2  />} /> {/* Test Route 2 */}
+                    {/*<Route path="/request"   element={<Request   />} />  {/* Test Route */} 
+                    <Route path="/servy"     element={<Servy     />} />
+                    <Route path="/request2"  element={<Request2  />} />  {/* Test Route 2 */}
+                    <Route path="/mainpage"  element={<MainPage  />} />  {/* Test Route 3 */}
                 </Routes>
             </div>
         </Router>
