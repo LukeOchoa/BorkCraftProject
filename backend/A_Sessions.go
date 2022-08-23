@@ -79,6 +79,10 @@ func testSession2(sessionLengthx int, w http.ResponseWriter, req *http.Request) 
 	return cookie
 }
 
+func nativeAlreadyLoggedIn(resp http.ResponseWriter, req *http.Request) bool {
+	return true
+}
+
 func alreadyLoggedIn(w http.ResponseWriter, req *http.Request) bool {
 	// Retrive the session. If there is no session, return false
 	cookie, err := req.Cookie("session")

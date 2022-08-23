@@ -91,6 +91,12 @@ func getValidIDstr(dbName string) string {
 
 // Supportive Functions \\
 
+func panik(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // Remove a certain amount of characters from either the beginning or end of a string
 func reduceString(str *string, amount int, position string) {
 	// TODO This function can still break itself if the user puts in incorrect values
@@ -162,6 +168,7 @@ func hashIt(psswd string) string {
 	return string(bs)
 }
 
+// marshal & unmarshal to json
 func (profile nProfile) Marshal() []byte {
 	response, err := json.Marshal(profile)
 	if err != nil {
@@ -190,6 +197,23 @@ func Decode(profile *nProfile, reader io.Reader) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (nativeProfile *nativenProfile) Decode(reader io.Reader){
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&nativeProfile)
+	panik(err)
+}
+func (nativeKey *NativeKey) Encode() []byte {
+	var buffer bytes.Buffer
+	json.NewEncoder(&buffer).Encode(&nativeKey)
+	return buffer.Bytes()
+}
+
+func map_to_json(theMap map[string]string) []byte {
+	response, err := json.Marshal(theMap)
+	panik(err)
+	return response
 }
 
 // \\ _________________________________ //

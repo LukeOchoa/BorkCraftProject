@@ -1,10 +1,12 @@
 package main
 
 import (
-	//"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	//"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -14,6 +16,19 @@ import (
 )
 
 type Any interface{}
+
+type NativeKey struct {
+	Id 		   string
+	Sessionid  string //uuid.UUID 
+	Lastactive string 
+	Expiration string 
+	Username   string 
+}
+
+type nativenProfile struct {
+	key string
+	profile nProfile
+}
 
 type nProfile struct {
 	Username  string
@@ -38,9 +53,14 @@ type Crud struct {
 
 // This is a testing function... Please delete later...
 func messageJSON() []byte {
-	var message = map[string]string{
-		"message": "There is Nothing to show!!!",
+	//var message = map[string]string{
+	//	"message": "There is Nothing to show!!!",
+	//}
+	
+	var message = map[string]map[string]string {
+		"message": {"message": "There is nothing to show???"},
 	}
+
 	r, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("Panic inside messageJSON/index/main @ json.Marshal() 2222 ... !")
@@ -48,7 +68,16 @@ func messageJSON() []byte {
 	}
 	return r
 }
-
+func messageJSONxx(key string, value string) []byte {
+	var message = map[string]string{
+		"key": value,
+	}
+	r, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
 func messageJSONx(str string) []byte {
 	var message = map[string]string{
 		"message": str,
@@ -103,7 +132,7 @@ func doNothing(w http.ResponseWriter, r *http.Request) {}
 
 // MAIN FUNCTION ================================== MAIN FUNCTION \\
 func main() {
-	fmt.Println("Server going! @ localhost:8080...")
+	fmt.Println("Server going! @ localhost:8123...")
 
 	//go checkSessions() // function loop never leaves?
 
@@ -114,9 +143,13 @@ func main() {
 	http.Handle("/logout", corsHandler(http.HandlerFunc(logout)))
 
 	http.Handle("/whitelist", corsHandler(http.HandlerFunc(whitelist)))
-	http.Handle("/NetherPortals", corsHandler(http.HandlerFunc(netherPortals)))
+	http.Handle("/netherportals", corsHandler(http.HandlerFunc(netherPortals)))
 
-	http.ListenAndServe(":8080", nil)
+	http.Handle("/testingpoint", corsHandler(http.HandlerFunc(testingPoint)))
+	http.HandleFunc("/testingpoint2", testingPoint2)
+	http.HandleFunc("/nativekey", native_key)
+
+	http.ListenAndServe(":8123", nil)
 }
 
 /*
@@ -151,6 +184,68 @@ ALTER TABLE netherportals RENAME local_nether to locale_nether
   owner_nether TEXT,
   notes_nether TEXT);
 */
+
+func testingPoint(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(messageJSON())
+}
+
+func testingPoint2(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("does something happen?")
+	var resp map[string]string
+	body, err := ioutil.ReadAll(r.Body)
+	panik(err)
+
+	err = json.Unmarshal(body, &resp)
+	panik(err)
+
+	fmt.Println(resp)
+}
+
+func unmarshalResponse(reader io.ReadCloser) map[string]string {
+	var response map[string]string
+	body, err := ioutil.ReadAll(reader)
+	panik(err)
+
+	err = json.Unmarshal(body, &response)
+	panik(err)
+
+	return response 
+}
+//type NativeKey struct {
+//	id 		   string
+//	sessionid  uuid.UUID 
+//	lastactive string 
+//	expiration string 
+//	username   string 
+//}
+//type Crud struct {
+//	table           string
+//	column          []string
+//	column_value    []string
+//	where           string
+//	where_condition string
+//}
+func native_key(w http.ResponseWriter, r *http.Request) {
+	nk := NativeKey {
+		Id: getValidIDstr("native_user_keys"),
+		Sessionid: uuid.NewV4().String(),
+		Lastactive: time.Now().String(),
+		Expiration: time.Now().Add(time.Hour).String(),
+		Username: r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
+	} 
+	var crud Crud = Crud {
+		table: "native_user_keys",
+		column: []string{"id", "sessionid", "lastactive", "expiration", "username"},
+		column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
+	}
+	dbCreate(crud)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(messageJSONxx("key", nk.Sessionid))
+}
+
 
 func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 
@@ -212,6 +307,7 @@ func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 	if err2 != nil {
 		panic(err2)
 	}
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonAllNetherPortals)
 
 }
@@ -303,6 +399,41 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Print("\n\n\n")
 
+}
+
+func native_signup(w http.ResponseWriter, r *http.Request) {
+	//if r.Method == http.MethodGet {
+	//	if nativeAlreadyLoggedIn(w, r) {
+	//		w.WriteHeader(http.StatusSeeOther)
+	//		return
+	//	}
+	//}
+
+	if r.Method == http.MethodPost {
+
+		// process request body
+		//var nativeProfile nativenProfile
+		//nativeProfile.Decode(r.Body)
+
+		var profile nProfile
+		profile.Decode((r.Body))
+
+		if !checkUsernameAvailability(profile) {
+			http.Error(w, "Username is already taken!", http.StatusForbidden)
+			return
+		}
+
+		// create a database profile
+		crud := Crud {
+			table:        "userprofile",
+			column:       []string{"id", "username", "password", "firstname", "lastname", "role"},
+			column_value: []string{getValidIDstr("userprofile"), profile.Username, hashIt(profile.Password), profile.Firstname, profile.Lastname, profile.Role},
+		}
+		dbCreate(crud)
+		w.WriteHeader(http.StatusOK)
+		// create a session
+		// write back with status "OK"
+	}
 }
 
 func signup(w http.ResponseWriter, r *http.Request) {
