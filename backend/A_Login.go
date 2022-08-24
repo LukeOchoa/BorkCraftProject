@@ -147,7 +147,8 @@ func main() {
 
 	http.Handle("/testingpoint", corsHandler(http.HandlerFunc(testingPoint)))
 	http.HandleFunc("/testingpoint2", testingPoint2)
-	http.HandleFunc("/nativekey", native_key)
+	//http.HandleFunc("/nativekey", native_key)
+	http.HandleFunc("/nativesignup", native_signup)
 
 	http.ListenAndServe(":8123", nil)
 }
@@ -226,24 +227,45 @@ func unmarshalResponse(reader io.ReadCloser) map[string]string {
 //	where           string
 //	where_condition string
 //}
-func native_key(w http.ResponseWriter, r *http.Request) {
-	nk := NativeKey {
-		Id: getValidIDstr("native_user_keys"),
-		Sessionid: uuid.NewV4().String(),
-		Lastactive: time.Now().String(),
-		Expiration: time.Now().Add(time.Hour).String(),
-		Username: r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
-	} 
-	var crud Crud = Crud {
-		table: "native_user_keys",
-		column: []string{"id", "sessionid", "lastactive", "expiration", "username"},
-		column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
-	}
-	dbCreate(crud)
+func native_key(profile nProfile) (bool, string) {
+	var crud Crud
+	// check if the user has a profile already created
+	//crud = Crud {
+	//	table: "userprofile",
+	//	where: "password",
+	//	where_condition: r.URL.Query()["password"][0],
+	//}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(messageJSONxx("key", nk.Sessionid))
+	username := profile.Username
+    password := profile.Password
+	if checkIfExists("userprofile", "username", username)  {
+		storedPassword := selectFromDB("password", "userprofile", "username", username)
+		err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
+		if !panikBool(err) {
+			return false, ""
+			//w.WriteHeader(http.StatusForbidden)	
+		} else {
+			nk := NativeKey {
+				Id: getValidIDstr("native_user_keys"),
+				Sessionid: uuid.NewV4().String(),
+				Lastactive: time.Now().String(),
+				Expiration: time.Now().Add(time.Hour).String(),
+				Username: username, //r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
+			} 
+			crud = Crud {
+				table: "native_user_keys",
+				column: []string{"id", "sessionid", "lastactive", "expiration", "username"},
+				column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
+			}
+			dbCreate(crud)
+
+			//w.Header().Set("Content-Type", "application/json")
+			//w.WriteHeader(http.StatusOK)
+			//w.Write(messageJSONxx("key", nk.Sessionid))
+			return true, nk.Sessionid
+		}
+	}
+	return false, ""
 }
 
 
@@ -402,6 +424,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func native_signup(w http.ResponseWriter, r *http.Request) {
+
 	//if r.Method == http.MethodGet {
 	//	if nativeAlreadyLoggedIn(w, r) {
 	//		w.WriteHeader(http.StatusSeeOther)
@@ -410,11 +433,6 @@ func native_signup(w http.ResponseWriter, r *http.Request) {
 	//}
 
 	if r.Method == http.MethodPost {
-
-		// process request body
-		//var nativeProfile nativenProfile
-		//nativeProfile.Decode(r.Body)
-
 		var profile nProfile
 		profile.Decode((r.Body))
 
@@ -430,9 +448,15 @@ func native_signup(w http.ResponseWriter, r *http.Request) {
 			column_value: []string{getValidIDstr("userprofile"), profile.Username, hashIt(profile.Password), profile.Firstname, profile.Lastname, profile.Role},
 		}
 		dbCreate(crud)
-		w.WriteHeader(http.StatusOK)
-		// create a session
-		// write back with status "OK"
+		booly, key := native_key(profile)
+		if  booly {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(messageJSONxx("key", key))
+		} else  {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write(messageJSONxx("key", key))
+		}
 	}
 }
 

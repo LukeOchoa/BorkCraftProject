@@ -96,6 +96,13 @@ func panik(err error) {
 		panic(err)
 	}
 }
+func panikBool(err error) bool {
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
+}
 
 // Remove a certain amount of characters from either the beginning or end of a string
 func reduceString(str *string, amount int, position string) {
@@ -266,13 +273,13 @@ func loadUser(sID string, profile *nProfile) bool {
 	return true
 }
 
-func selectFromDB(column string, table string, condition string, stored_value string) string {
+func selectFromDB(column string, table string, condition string, where_condition string) string {
 
 	//SELECT column FROM table WHERE condition ='stored_value';
 	db := create_DB_Connection()
 
 	sql_select := fmt.Sprintf(`
-                SELECT %s FROM %s WHERE %s='%s'`, column, table, condition, stored_value)
+                SELECT %s FROM %s WHERE %s='%s'`, column, table, condition, where_condition)
 	var database_value string
 	err := db.QueryRow(sql_select).Scan(&database_value)
 
