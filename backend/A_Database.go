@@ -61,6 +61,18 @@ func (nuk *nativeUserKeys) toSlice() []string {
 		nuk.Username,
 	}
 }
+
+func updateNativeKeyExpiration(key string) {
+	var crud Crud = Crud{
+		table:           "native_user_keys",
+		column:          []string{"expiration"},
+		column_value:    []string{time.Now().Add(time.Second * 30).Format(RFC3339)},
+		where:           "sessionid",
+		where_condition: key,
+	}
+	dbUpdate(crud)
+}
+
 func checkNativeKeyExpiration(key string) bool {
 	theTime, err := time.Parse(RFC3339, selectFromDB(
 		"expiration",
@@ -70,9 +82,9 @@ func checkNativeKeyExpiration(key string) bool {
 	))
 	panik(err)
 	if time.Since(theTime) > (time.Second * 30) {
-		var crud Crud = Crud {
-			table: "native_user_keys",
-			where: "sessionid",
+		var crud Crud = Crud{
+			table:           "native_user_keys",
+			where:           "sessionid",
 			where_condition: key,
 		}
 		dbDelete(crud)
@@ -81,7 +93,6 @@ func checkNativeKeyExpiration(key string) bool {
 	}
 
 	return true
-
 
 	// get all
 	//var crud Crud = Crud{

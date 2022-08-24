@@ -229,6 +229,23 @@ func unmarshalResponse(reader io.ReadCloser) map[string]string {
 //		where           string
 //		where_condition string
 //	}
+func createNativeKey(username string) string {
+	nk := NativeKey{
+		Id:         getValidIDstr("native_user_keys"),
+		Sessionid:  uuid.NewV4().String(),
+		Lastactive: time.Now().String(),
+		Expiration: time.Now().Add(time.Hour).String(),
+		Username:   username, //r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
+	}
+	var crud Crud = Crud{
+		table:        "native_user_keys",
+		column:       []string{"id", "sessionid", "lastactive", "expiration", "username"},
+		column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
+	}
+	dbCreate(crud)
+
+	return nk.Sessionid
+}
 func native_key(profile nProfile) (bool, string) {
 	var crud Crud
 	// check if the user has a profile already created
@@ -265,10 +282,30 @@ func native_key(profile nProfile) (bool, string) {
 			//w.WriteHeader(http.StatusOK)
 			//w.Write(messageJSONxx("key", nk.Sessionid))
 			return true, nk.Sessionid
+
+			// and then...
 		}
 	}
 	return false, ""
 }
+
+//func createNativeKey(profile nProfile) (bool, string) {
+//crud := Crud{
+//table:        "userprofile",
+//column:       []string{"id", "username", "password", "firstname", "lastname", "role"},
+//column_value: []string{getValidIDstr("userprofile"), profile.Username, hashIt(profile.Password), profile.Firstname, profile.Lastname, profile.Role},
+//}
+//dbCreate(crud)
+//booly, key := native_key(profile)
+////if booly {
+////	w.Header().Set("Content-Type", "application/json")
+////	w.WriteHeader(http.StatusOK)
+////	w.Write(messageJSONxx("key", key))
+////} else {
+////	w.WriteHeader(http.StatusForbidden)
+////	w.Write(messageJSONxx("key", key))
+////}
+//}
 
 func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 
@@ -515,9 +552,30 @@ func native_login(w http.ResponseWriter, r *http.Request) {
 
 	var profile nProfile = nativeProfile.profile
 
+	// check if username is real
+	if !checkIfExists("userprofile", "username", profile.Username) {
+		//http.Error(w, "Username and/or password do not match! USERNAME FAIL!", http.StatusForbidden)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// check if password is correct
+	storedPassword := selectFromDB("password", "userprofile", "username", profile.Username)
+	err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(profile.Password))
+	if err != nil {
+		fmt.Print("\n", err, "\n Login Failed \n")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// get their sessionid: 1) check if its expired, if so update the sessionid
+	nativeProfile.key = createNativeKey(profile.Username)
 	if checkNativeKeyExpiration(nativeProfile.key) {
+		// update
+		updateNativeKeyExpiration(nativeProfile.key)
 		// do things
 	}
+	w.WriteHeader(http.StatusForbidden)
 	// false check, do other things...?
 }
 
