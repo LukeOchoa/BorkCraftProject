@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"io"
+	"time"
 
 	//"reflect"
 	"fmt"
@@ -41,6 +42,62 @@ func create_DB_Connection() *sql.DB {
 	// fmt.Println("Successfully connected!")
 
 	return db
+}
+
+type nativeUserKeys struct {
+	Id         string
+	Sessionid  string
+	Lastactive string
+	Expiration string
+	Username   string
+}
+
+func (nuk *nativeUserKeys) toSlice() []string {
+	return []string{
+		nuk.Id,
+		nuk.Sessionid,
+		nuk.Lastactive,
+		nuk.Expiration,
+		nuk.Username,
+	}
+}
+func checkNativeKeyExpiration(key string) bool {
+	theTime, err := time.Parse(RFC3339, selectFromDB(
+		"expiration",
+		"native_user_keys",
+		"sessionid",
+		key,
+	))
+	panik(err)
+	if time.Since(theTime) > (time.Second * 30) {
+		var crud Crud = Crud {
+			table: "native_user_keys",
+			where: "sessionid",
+			where_condition: key,
+		}
+		dbDelete(crud)
+
+		return false
+	}
+
+	return true
+
+
+	// get all
+	//var crud Crud = Crud{
+	//	table:           "native_user_keys",
+	//	column:          []string{"*"},
+	//	where:           "sessionid",
+	//	where_condition: key,
+	//}
+	//var nuk nativeUserKeys
+
+	//sql := dbRead(crud)
+	//db := create_DB_Connection()
+	//err := db.QueryRow(sql).Scan(&nuk.Id, &nuk.Sessionid, &nuk.Lastactive, &nuk.Expiration, &nuk.Username)
+	//panik(err)
+
+	//table := nuk.toSlice()
 }
 
 func getValidIDstr(dbName string) string {
@@ -206,7 +263,7 @@ func Decode(profile *nProfile, reader io.Reader) {
 	}
 }
 
-func (nativeProfile *nativenProfile) Decode(reader io.Reader){
+func (nativeProfile *nativenProfile) Decode(reader io.Reader) {
 	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&nativeProfile)
 	panik(err)

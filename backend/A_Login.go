@@ -18,15 +18,15 @@ import (
 type Any interface{}
 
 type NativeKey struct {
-	Id 		   string
-	Sessionid  string //uuid.UUID 
-	Lastactive string 
-	Expiration string 
-	Username   string 
+	Id         string
+	Sessionid  string //uuid.UUID
+	Lastactive string
+	Expiration string
+	Username   string
 }
 
 type nativenProfile struct {
-	key string
+	key     string
 	profile nProfile
 }
 
@@ -56,8 +56,8 @@ func messageJSON() []byte {
 	//var message = map[string]string{
 	//	"message": "There is Nothing to show!!!",
 	//}
-	
-	var message = map[string]map[string]string {
+
+	var message = map[string]map[string]string{
 		"message": {"message": "There is nothing to show???"},
 	}
 
@@ -211,22 +211,24 @@ func unmarshalResponse(reader io.ReadCloser) map[string]string {
 	err = json.Unmarshal(body, &response)
 	panik(err)
 
-	return response 
+	return response
 }
-//type NativeKey struct {
-//	id 		   string
-//	sessionid  uuid.UUID 
-//	lastactive string 
-//	expiration string 
-//	username   string 
-//}
-//type Crud struct {
-//	table           string
-//	column          []string
-//	column_value    []string
-//	where           string
-//	where_condition string
-//}
+
+//	type NativeKey struct {
+//		id 		   string
+//		sessionid  uuid.UUID
+//		lastactive string
+//		expiration string
+//		username   string
+//	}
+//
+//	type Crud struct {
+//		table           string
+//		column          []string
+//		column_value    []string
+//		where           string
+//		where_condition string
+//	}
 func native_key(profile nProfile) (bool, string) {
 	var crud Crud
 	// check if the user has a profile already created
@@ -237,24 +239,24 @@ func native_key(profile nProfile) (bool, string) {
 	//}
 
 	username := profile.Username
-    password := profile.Password
-	if checkIfExists("userprofile", "username", username)  {
+	password := profile.Password
+	if checkIfExists("userprofile", "username", username) {
 		storedPassword := selectFromDB("password", "userprofile", "username", username)
 		err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(password))
 		if !panikBool(err) {
 			return false, ""
-			//w.WriteHeader(http.StatusForbidden)	
+			//w.WriteHeader(http.StatusForbidden)
 		} else {
-			nk := NativeKey {
-				Id: getValidIDstr("native_user_keys"),
-				Sessionid: uuid.NewV4().String(),
+			nk := NativeKey{
+				Id:         getValidIDstr("native_user_keys"),
+				Sessionid:  uuid.NewV4().String(),
 				Lastactive: time.Now().String(),
 				Expiration: time.Now().Add(time.Hour).String(),
-				Username: username, //r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
-			} 
-			crud = Crud {
-				table: "native_user_keys",
-				column: []string{"id", "sessionid", "lastactive", "expiration", "username"},
+				Username:   username, //r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
+			}
+			crud = Crud{
+				table:        "native_user_keys",
+				column:       []string{"id", "sessionid", "lastactive", "expiration", "username"},
 				column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
 			}
 			dbCreate(crud)
@@ -267,7 +269,6 @@ func native_key(profile nProfile) (bool, string) {
 	}
 	return false, ""
 }
-
 
 func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 
@@ -442,18 +443,18 @@ func native_signup(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// create a database profile
-		crud := Crud {
+		crud := Crud{
 			table:        "userprofile",
 			column:       []string{"id", "username", "password", "firstname", "lastname", "role"},
 			column_value: []string{getValidIDstr("userprofile"), profile.Username, hashIt(profile.Password), profile.Firstname, profile.Lastname, profile.Role},
 		}
 		dbCreate(crud)
 		booly, key := native_key(profile)
-		if  booly {
+		if booly {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write(messageJSONxx("key", key))
-		} else  {
+		} else {
 			w.WriteHeader(http.StatusForbidden)
 			w.Write(messageJSONxx("key", key))
 		}
@@ -506,6 +507,18 @@ func signup(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
+}
+
+func native_login(w http.ResponseWriter, r *http.Request) {
+	var nativeProfile nativenProfile
+	nativeProfile.Decode(r.Body)
+
+	var profile nProfile = nativeProfile.profile
+
+	if checkNativeKeyExpiration(nativeProfile.key) {
+		// do things
+	}
+	// false check, do other things...?
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
