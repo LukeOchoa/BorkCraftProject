@@ -26,8 +26,13 @@ type NativeKey struct {
 }
 
 type nativenProfile struct {
-	key     string
-	profile nProfile
+	Key     string
+	Profile nProfile
+	Message string
+}
+
+type Key struct {
+	Key string
 }
 
 type nProfile struct {
@@ -147,8 +152,12 @@ func main() {
 
 	http.Handle("/testingpoint", corsHandler(http.HandlerFunc(testingPoint)))
 	http.HandleFunc("/testingpoint2", testingPoint2)
+	http.HandleFunc("/testingpoint3", testingPoint3)
 	//http.HandleFunc("/nativekey", native_key)
 	http.HandleFunc("/nativesignup", native_signup)
+	http.HandleFunc("/nativelogin", native_login)
+	http.HandleFunc("/sessiontimeleft", sessionTimeLeft)
+	//http.Handle("/nativelogin", corsHandler(http.HandlerFunc(native_login)))
 
 	http.ListenAndServe(":8123", nil)
 }
@@ -185,6 +194,46 @@ ALTER TABLE netherportals RENAME local_nether to locale_nether
   owner_nether TEXT,
   notes_nether TEXT);
 */
+
+func sessionTimeLeft(w http.ResponseWriter, r *http.Request) {
+	var key Key
+	body, err := ioutil.ReadAll(r.Body)
+	panik(err)
+
+	err = json.Unmarshal(body, &key)
+	panik(err)
+
+	if key.Key == "None" {
+		sessionTime := map[string]string{
+			"second": "",
+			"minute": "",
+			"hour":   "",
+		}
+		theTimeJson, err := json.Marshal(sessionTime)
+		panik(err)
+
+		w.WriteHeader(http.StatusForbidden)
+		w.Write(theTimeJson)
+	} else {
+		theTimeString := selectFromDB("expiration", "native_user_keys", "sessionid", key.Key)
+		theTime, err := time.Parse(RFC3339, theTimeString)
+		panik(err)
+
+		theTimeMap := getSessionTimeToMap(theTime)
+		theTimeNowMap := getSessionTimeToMap(time.Now())
+		for key := range theTimeNowMap {
+			difference := panikReturnInt(strconv.Atoi(theTimeMap[key])) - panikReturnInt(strconv.Atoi(theTimeNowMap[key]))
+			theTimeMap[key]	= strconv.Itoa(difference)
+		}
+
+		theTimeJson, err := json.Marshal(theTimeMap)
+		panik(err)
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write(theTimeJson)
+	}
+
+}
 
 func testingPoint(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -229,23 +278,18 @@ func unmarshalResponse(reader io.ReadCloser) map[string]string {
 //		where           string
 //		where_condition string
 //	}
-func createNativeKey(username string) string {
-	nk := NativeKey{
-		Id:         getValidIDstr("native_user_keys"),
-		Sessionid:  uuid.NewV4().String(),
-		Lastactive: time.Now().String(),
-		Expiration: time.Now().Add(time.Hour).String(),
-		Username:   username, //r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
-	}
-	var crud Crud = Crud{
-		table:        "native_user_keys",
-		column:       []string{"id", "sessionid", "lastactive", "expiration", "username"},
-		column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
-	}
-	dbCreate(crud)
+func createTimeRFC3339(theTime time.Time) time.Time {
+	someTime, err := time.Parse(RFC3339, theTime.Format(RFC3339))
+	panik(err)
 
-	return nk.Sessionid
+	return someTime
 }
+func createTimeStringRFC3339(theTime time.Time) string {
+	someTime := theTime.Format(RFC3339)
+
+	return someTime
+}
+
 func native_key(profile nProfile) (bool, string) {
 	var crud Crud
 	// check if the user has a profile already created
@@ -547,14 +591,24 @@ func signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func native_login(w http.ResponseWriter, r *http.Request) {
+
+	// if the user is logged in and has a key... how do you know if they still possess it?
+	// and if they still possess it, what do you do to not waste time sending another one?
+	// should they not prove their claim!?
+
 	var nativeProfile nativenProfile
 	nativeProfile.Decode(r.Body)
+	fmt.Println("SOME native profile?: ", nativeProfile)
 
-	var profile nProfile = nativeProfile.profile
+	var profile nProfile = nativeProfile.Profile
+	//var profile nProfile
+	//profile.Decode(r.Body)
 
 	// check if username is real
+	fmt.Println("user name here:", profile.Username)
 	if !checkIfExists("userprofile", "username", profile.Username) {
 		//http.Error(w, "Username and/or password do not match! USERNAME FAIL!", http.StatusForbidden)
+		fmt.Println("username fail")
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
@@ -569,12 +623,109 @@ func native_login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get their sessionid: 1) check if its expired, if so update the sessionid
-	nativeProfile.key = createNativeKey(profile.Username)
-	if checkNativeKeyExpiration(nativeProfile.key) {
-		// update
-		updateNativeKeyExpiration(nativeProfile.key)
-		// do things
+	//nativeProfile.Key = createNativeKey(profile.Username)
+
+	// check if session exists
+	if checkIfExists("native_user_keys", "username", profile.Username) {
+		// now find out if their session is still valid ([1])
+		// a valid session is...? one that has not expired yet
+		// so check to see if their expiration date (give to the session in the database under "expiration") has passed yet or not
+		theTimeString := selectFromDB("expiration", "native_user_keys", "username", profile.Username)
+		theTime, err := time.Parse(RFC3339, theTimeString)
+		panik(err)
+
+		//if yes then, is the session still valid...? ([2])
+		now, err := time.Parse(RFC3339, time.Now().Format(RFC3339))
+		panik(err)
+		//if theTime.After(now) {
+		fmt.Println("DIFFERENCE BETWEEN: ", theTime.Sub(now))
+		if now.After(theTime) {
+			fmt.Println("After is true")
+			//if theTime.After(theTime.Add(time.Duration(time.Second * 30))) { // if not valid ([3.not valid])
+			// create a new session key!
+			var crud Crud = Crud{
+				table:           "native_user_keys",
+				where:           "username",
+				where_condition: profile.Username,
+			}
+			dbDelete(crud)
+			someKey := createNativeKey(profile.Username)
+			w.WriteHeader(http.StatusAccepted)
+
+			// after creating a new session...
+			// send a message (along with the new key) through http to tell them how long they have left...!
+			var message = map[string]interface{}{
+				"key":  someKey,
+				"time": getSessionTimeToMap(theTime),
+				"message": "Your getting a new key!",
+			}
+			r, err := json.Marshal(message)
+			panik(err)
+			w.Write(r)
+
+			return
+		} else { // if valid ([3.is valid])
+			fmt.Println("After is False ")
+			// return the session key...!
+			dbSessionKey := selectFromDB("sessionid", "native_user_keys", "username", profile.Username)
+			var newMessage string
+			if dbSessionKey == nativeProfile.Key {
+				newMessage = "Your already logged in!"
+			} else {
+				newMessage = "Your getting a key!"
+			}
+			var message = map[string]interface{}{
+				"key":  dbSessionKey,
+				"time": getSessionTimeToMap(theTime),
+				"message": newMessage,
+			}
+			r, err := json.Marshal(message)
+			panik(err)
+			w.Write(r)
+			return
+		}
+	} else {
+		someKey := createNativeKey(profile.Username)
+
+		theTimeString := selectFromDB("expiration", "native_user_keys", "username", profile.Username)
+		theTime, err := time.Parse(RFC3339, theTimeString)
+		panik(err)
+
+		var message = map[string]interface{}{
+			"key":  someKey,
+			"time": getSessionTimeToMap(theTime),
+		}
+		r, err := json.Marshal(message)
+		panik(err)
+		w.Write(r)
+		return
+
 	}
+
+	// if session is still valid...
+	//w.Write(messageJSONxx("key", nativeProfile.Key))
+
+	// create a time in hours, minutes, seconds that describes how much time is left on the current user's session
+	// parse it to a string and call it timeLeftUntilSessionExpiration
+	// use this variable to be sent in the message that will be passed to the user through http
+
+	//func messageJSONxx(key string, value string) []byte {
+	//var message = map[string]string{
+	//	"key": value,
+	//}
+	//r, err := json.Marshal(message)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//return r
+	//}
+
+	//updateNativeKeyExpiration(uuid.NewV4().String())
+	//if checkNativeKeyExpiration(nativeProfile.Key) {
+	//	// update
+	//	updateNativeKeyExpiration(nativeProfile.Key)
+	//	// do things
+	//}
 	w.WriteHeader(http.StatusForbidden)
 	// false check, do other things...?
 }
@@ -635,6 +786,25 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func testingPoint3(w http.ResponseWriter, r *http.Request) {
+
+	createNativeKey("luke.ochoa@gmail.com")
+
+	theTimeString := selectFromDB("expiration", "native_user_keys", "username", "luke.ochoa@gmail.com")
+	theTime, err := time.Parse(RFC3339, theTimeString)
+	panik(err)
+
+	var message = map[string]interface{}{
+		"key":  "someKey", //selectFromDB("sessionid", "native_user_keys", "username", "luke.ochoa@gmail.com"),
+		"time": getSessionTimeToMap(theTime),
+	}
+	theJSON, err := json.Marshal(message)
+	panik(err)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(theJSON)
+
+}
+
 // TODO
 // Make a "Logout" function/route piece-o-crap
 func logout(w http.ResponseWriter, r *http.Request) {
@@ -657,7 +827,7 @@ func corsHandler(h http.Handler) http.HandlerFunc {
 		switch r.Method {
 		case "OPTIONS":
 			fmt.Println("OPTIONS")
-			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		case "GET":

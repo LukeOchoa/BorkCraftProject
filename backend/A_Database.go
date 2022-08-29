@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strconv"
 
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -60,6 +61,25 @@ func (nuk *nativeUserKeys) toSlice() []string {
 		nuk.Expiration,
 		nuk.Username,
 	}
+}
+
+func createNativeKey(username string) string {
+	nk := NativeKey{
+		Id:         getValidIDstr("native_user_keys"),
+		Sessionid:  uuid.NewV4().String(),
+		Lastactive: time.Now().Format(RFC3339),
+		Expiration: time.Now().Add(time.Second * 30).Format(RFC3339), // CURRENT DEATH FOR REAL
+		Username:   username,                                         //r.URL.Query()["username"][0],  //unmarshalResponse(r.Body)["username"],
+	}
+	fmt.Println("the id is here: ", nk.Id)
+	var crud Crud = Crud{
+		table:        "native_user_keys",
+		column:       []string{"id", "sessionid", "lastactive", "expiration", "username"},
+		column_value: []string{nk.Id, nk.Sessionid, nk.Lastactive, nk.Expiration, nk.Username},
+	}
+	dbCreate(crud)
+
+	return nk.Sessionid
 }
 
 func updateNativeKeyExpiration(key string) {
@@ -170,6 +190,10 @@ func panikBool(err error) bool {
 	} else {
 		return true
 	}
+}
+func panikReturnInt(integer int, err error) int {
+	panik(err)
+	return integer 
 }
 
 // Remove a certain amount of characters from either the beginning or end of a string
@@ -464,7 +488,7 @@ func dbUpdate(crud Crud) {
 // TODO make a delete function
 func dbDelete(crud Crud) {
 	sql_delete := fmt.Sprintf(
-		`DELETE FROM %s WHERE %s='%s';`, crud.table, crud.column[0], crud.column_value[0],
+		`DELETE FROM %s WHERE %s='%s';`, crud.table, crud.where, crud.where_condition,
 	)
 	db := create_DB_Connection()
 	_, err := db.Exec(sql_delete)
@@ -472,4 +496,19 @@ func dbDelete(crud Crud) {
 		panic(err)
 	}
 	db.Close()
+}
+
+// returns a json []byte of the current session time in hours, mins, seconds
+func getSessionTimeToMap(theTime time.Time) map[string]string {
+	second := strconv.Itoa(theTime.Second())
+	minute := strconv.Itoa(theTime.Minute())
+	hour := strconv.Itoa(theTime.Hour())
+
+	sessionTime := map[string]string{
+		"second": second,
+		"minute": minute,
+		"hour":   hour,
+	}
+
+	return sessionTime
 }
