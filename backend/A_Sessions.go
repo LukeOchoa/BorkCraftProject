@@ -45,6 +45,16 @@ func deleteSession(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 }
 
+func deleteNativeSession(key string) {
+	crud := Crud {
+		table: "native_user_keys",
+		where: "sessionid",
+		where_condition: key,
+	}
+	dbDelete(crud)
+
+}
+
 func createSession(sessionLength int, w http.ResponseWriter, req *http.Request) *http.Cookie {
 	// Create uuid for client and assign it to cookie along with max-age and name
 	sID := uuid.NewV4()

@@ -156,8 +156,18 @@ func main() {
 	//http.HandleFunc("/nativekey", native_key)
 	http.HandleFunc("/nativesignup", native_signup)
 	http.HandleFunc("/nativelogin", native_login)
+	http.HandleFunc("/nativelogin2", native_login2)
 	http.HandleFunc("/sessiontimeleft", sessionTimeLeft)
+	http.HandleFunc("/nativelogout", nativeLogout)
 	//http.Handle("/nativelogin", corsHandler(http.HandlerFunc(native_login)))
+
+	http.Handle("/somelist", corsHandler(http.HandlerFunc(betterWhitelist)))
+	http.Handle("/sendmember", corsHandler(http.HandlerFunc(sendMemberByName)))
+	http.HandleFunc("/netherportalcount", netherPortalCount)
+	http.Handle("/netherportalcountcors", corsHandler(http.HandlerFunc(netherPortalCount)) )
+	http.Handle("/vecnetherportals", corsHandler(http.HandlerFunc(vecNetherPortals)))
+
+
 
 	http.ListenAndServe(":8123", nil)
 }
@@ -203,7 +213,8 @@ func sessionTimeLeft(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &key)
 	panik(err)
 
-	if key.Key == "None" {
+	if key.Key == "" {
+		fmt.Println("Key equals no characters, an empty string ||")
 		sessionTime := map[string]string{
 			"second": "",
 			"minute": "",
@@ -225,7 +236,6 @@ func sessionTimeLeft(w http.ResponseWriter, r *http.Request) {
 			difference := panikReturnInt(strconv.Atoi(theTimeMap[key])) - panikReturnInt(strconv.Atoi(theTimeNowMap[key]))
 			theTimeMap[key]	= strconv.Itoa(difference)
 		}
-
 		theTimeJson, err := json.Marshal(theTimeMap)
 		panik(err)
 
@@ -350,23 +360,37 @@ func native_key(profile nProfile) (bool, string) {
 ////	w.Write(messageJSONxx("key", key))
 ////}
 //}
+type Portal struct {
+	Xcord  int
+	Ycord  int
+	Zcord  int
+	Locale string
+	Owner  string
+	Notes  string
+	True_Name string
+}
+
+type NetherPortal struct {
+	Id        int
+	Nether    Portal
+	OverWorld Portal
+	Username string
+}
+
+//func send_np_with_address_to_next_np(w http.ResponseWriter, r *http.Request) {
+//
+//	var netherPortal NetherPortal
+//
+//
+//
+//
+//
+//
+//}
 
 func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 
-	type Portal struct {
-		Xcord  int
-		Ycord  int
-		Zcord  int
-		Locale string
-		Owner  string
-		Notes  string
-	}
 
-	type NetherPortal struct {
-		Id        int
-		Nether    Portal
-		OverWorld Portal
-	}
 	type AllNetherPortals struct {
 		AllNetherPortals []NetherPortal
 	}
@@ -394,10 +418,13 @@ func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 			&netherPortal.OverWorld.Locale,
 			&netherPortal.OverWorld.Owner,
 			&netherPortal.OverWorld.Notes,
+			&netherPortal.OverWorld.True_Name,
 
 			&netherPortal.Nether.Locale,
 			&netherPortal.Nether.Owner,
 			&netherPortal.Nether.Notes,
+			&netherPortal.Nether.True_Name,
+
 		)
 		if err != nil {
 			panic(err)
@@ -413,6 +440,129 @@ func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonAllNetherPortals)
+
+}
+func internalWhitelist() map[string]string{
+	db := create_DB_Connection()
+
+	crud := Crud {
+		table: "userprofile",
+		column: []string{"username"},
+	}
+	sql_string := dbRead(crud)
+
+	var arrayOfNames = make(map[string]string)
+	rows, err := db.Query(sql_string)
+	panik(err)
+	var inc int = 0
+	for rows.Next() {
+		var name string
+		err = rows.Scan(&name)
+		panik(err)
+
+		arrayOfNames[strconv.Itoa(inc)] = name
+		inc = inc + 1	
+	}
+	db.Close()
+
+	return arrayOfNames
+}
+
+
+func betterWhitelist(w http.ResponseWriter, r *http.Request) {
+	db := create_DB_Connection()
+
+	crud := Crud {
+		table: "netherportals",
+		column: []string{"id, username"},
+	}
+	sql_string := dbRead(crud)
+
+	
+	type MemberId struct {
+		Id string
+		Name string
+	}
+	type MemberIds struct {
+		Member_Ids []MemberId
+	}
+	//var arrayOfNames = make(map[string]map[string]string)
+	//var arrayOfNames = make([]map[string]string, 0)
+	var member_ids MemberIds
+	rows, err := db.Query(sql_string)
+	panik(err)
+	var inc int = 0
+	for rows.Next() {
+		var memberid MemberId
+		err = rows.Scan(&memberid.Id , &memberid.Name)
+		panik(err)
+
+		//arrayOfNames[strconv.Itoa(inc)] = 
+		//arrayOfNames = append(arrayOfNames, map[string]string {
+		//	"id": id,
+		//	"name": name,
+		//})
+		member_ids.Member_Ids = append(member_ids.Member_Ids, memberid)
+		inc = inc + 1	
+	}
+	w.Header().Set("Content-Type", "application/json")
+	//w.Write(map_to_json(arrayOfNames))
+	response, err := json.Marshal(member_ids)
+	panik(err)
+	w.Write(response)
+	db.Close()
+}
+
+//	where_condition: r.URL.Query()["password"][0],
+func sendMemberByName(w http.ResponseWriter, r *http.Request) {
+
+	id := r.URL.Query()["id"][0]
+	if checkIfExists("netherportals", "id", id) {
+
+		db := create_DB_Connection()
+		crud := Crud {
+			table: "netherportals", 
+			column: []string{"*",},
+			where: "id",
+			where_condition: id,
+
+		}
+		fmt.Println("MORE GAERBAGELKJSDL: |", crud)
+		var portal NetherPortal
+		sql_string := dbRead2(crud)
+		fmt.Println("MY CUSTOM SQL STRING", sql_string)
+		err := db.QueryRow(sql_string).Scan(
+			&portal.Id,
+			&portal.OverWorld.Xcord, 
+			&portal.OverWorld.Ycord, 
+			&portal.OverWorld.Zcord, 
+
+			&portal.Nether.Xcord, 
+			&portal.Nether.Ycord, 
+			&portal.Nether.Zcord, 
+
+			&portal.OverWorld.Locale,
+			&portal.OverWorld.Owner,
+			&portal.OverWorld.Notes,
+			&portal.OverWorld.True_Name,
+
+			&portal.Nether.Locale,
+			&portal.Nether.Owner,
+			&portal.Nether.Notes,
+			&portal.Nether.True_Name,
+
+			&portal.Username,
+		)
+		panik(err)
+
+		somePortal, err := json.Marshal(portal)
+		panik(err)
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Println("some portal ==========", portal)
+		w.Write(somePortal)
+		db.Close()
+	}
 
 }
 
@@ -590,6 +740,152 @@ func signup(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type NativeProfile struct {
+		Username string
+		Password string
+		SessionKey string
+}
+func native_login2(w http.ResponseWriter, r *http.Request) {
+
+	// if the user is logged in and has a key... how do you know if they still possess it?
+	// and if they still possess it, what do you do to not waste time sending another one?
+	// should they not prove their claim!?
+	
+
+	var profile NativeProfile
+	profile.Decode(r.Body)
+
+	//var profile nProfile
+	//profile.Decode(r.Body)
+
+	// check if username is real
+	fmt.Println("user name here:", profile.Username)
+	if !checkIfExists("userprofile", "username", profile.Username) {
+		//http.Error(w, "Username and/or password do not match! USERNAME FAIL!", http.StatusForbidden)
+		fmt.Println("username fail")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// check if password is correct
+	storedPassword := selectFromDB("password", "userprofile", "username", profile.Username)
+	err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(profile.Password))
+	if err != nil {
+		fmt.Print("\n", err, "\n Login Failed \n")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// get their sessionid: 1) check if its expired, if so update the sessionid
+	//nativeProfile.Key = createNativeKey(profile.Username)
+
+	// check if session exists
+	if checkIfExists("native_user_keys", "username", profile.Username) {
+		// now find out if their session is still valid ([1])
+		// a valid session is...? one that has not expired yet
+		// so check to see if their expiration date (give to the session in the database under "expiration") has passed yet or not
+		theTimeString := selectFromDB("expiration", "native_user_keys", "username", profile.Username)
+		theTime, err := time.Parse(RFC3339, theTimeString)
+		panik(err)
+
+		//if yes then, is the session still valid...? ([2])
+		now, err := time.Parse(RFC3339, time.Now().Format(RFC3339))
+		panik(err)
+		//if theTime.After(now) {
+		fmt.Println("DIFFERENCE BETWEEN: ", theTime.Sub(now))
+		if now.After(theTime) {
+			fmt.Println("After is true")
+			//if theTime.After(theTime.Add(time.Duration(time.Second * 30))) { // if not valid ([3.not valid])
+			// create a new session key!
+			var crud Crud = Crud{
+				table:           "native_user_keys",
+				where:           "username",
+				where_condition: profile.Username,
+			}
+			dbDelete(crud)
+			someKey := createNativeKey(profile.Username)
+			w.WriteHeader(http.StatusAccepted)
+
+			// after creating a new session...
+			// send a message (along with the new key) through http to tell them how long they have left...!
+
+			var message = map[string]interface{}{
+				"key":  someKey,
+				"time": getSessionTimeToMap(theTime),
+			}
+			r, err := json.Marshal(message)
+			panik(err)
+			w.Write(r)
+
+			return
+		} else { // if valid ([3.is valid])
+			fmt.Println("After is False ")
+			// return the session key...!
+			dbSessionKey := selectFromDB("sessionid", "native_user_keys", "username", profile.Username)
+			//var newMessage string
+			//if dbSessionKey == profile.SessionKey {
+			//	newMessage = "Your already logged in!"
+			//} else {
+			//	newMessage = "Your getting a key!"
+			//}
+			 
+			var message = map[string]interface{}{
+				"key":  dbSessionKey,
+				"time": getSessionTimeToMap(theTime),
+			}
+			r, err := json.Marshal(message)
+			panik(err)
+			w.WriteHeader(http.StatusAccepted)
+			w.Write(r)
+			return
+		}
+	} else {
+		someKey := createNativeKey(profile.Username)
+
+		theTimeString := selectFromDB("expiration", "native_user_keys", "username", profile.Username)
+		theTime, err := time.Parse(RFC3339, theTimeString)
+		panik(err)
+
+		var message = map[string]interface{}{
+			"key":  someKey,
+			"time": getSessionTimeToMap(theTime),
+		}
+		r, err := json.Marshal(message)
+		panik(err)
+		w.WriteHeader(http.StatusAccepted)
+		w.Write(r)
+		return
+
+	}
+
+	// if session is still valid...
+	//w.Write(messageJSONxx("key", nativeProfile.Key))
+
+	// create a time in hours, minutes, seconds that describes how much time is left on the current user's session
+	// parse it to a string and call it timeLeftUntilSessionExpiration
+	// use this variable to be sent in the message that will be passed to the user through http
+
+	//func messageJSONxx(key string, value string) []byte {
+	//var message = map[string]string{
+	//	"key": value,
+	//}
+	//r, err := json.Marshal(message)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//return r
+	//}
+
+	//updateNativeKeyExpiration(uuid.NewV4().String())
+	//if checkNativeKeyExpiration(nativeProfile.Key) {
+	//	// update
+	//	updateNativeKeyExpiration(nativeProfile.Key)
+	//	// do things
+	//}
+	// false check, do other things...?
+}
+
+
 func native_login(w http.ResponseWriter, r *http.Request) {
 
 	// if the user is logged in and has a key... how do you know if they still possess it?
@@ -657,7 +953,6 @@ func native_login(w http.ResponseWriter, r *http.Request) {
 			var message = map[string]interface{}{
 				"key":  someKey,
 				"time": getSessionTimeToMap(theTime),
-				"message": "Your getting a new key!",
 			}
 			r, err := json.Marshal(message)
 			panik(err)
@@ -668,16 +963,9 @@ func native_login(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("After is False ")
 			// return the session key...!
 			dbSessionKey := selectFromDB("sessionid", "native_user_keys", "username", profile.Username)
-			var newMessage string
-			if dbSessionKey == nativeProfile.Key {
-				newMessage = "Your already logged in!"
-			} else {
-				newMessage = "Your getting a key!"
-			}
 			var message = map[string]interface{}{
 				"key":  dbSessionKey,
 				"time": getSessionTimeToMap(theTime),
-				"message": newMessage,
 			}
 			r, err := json.Marshal(message)
 			panik(err)
@@ -729,6 +1017,7 @@ func native_login(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusForbidden)
 	// false check, do other things...?
 }
+
 
 func login(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("You made it to ghostLogin...!")
@@ -807,6 +1096,11 @@ func testingPoint3(w http.ResponseWriter, r *http.Request) {
 
 // TODO
 // Make a "Logout" function/route piece-o-crap
+type Logout struct {
+	Username string
+	Password string
+	Session_Key string
+}
 func logout(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("ping")
 	cookie, err := r.Cookie("session")
@@ -820,6 +1114,135 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+func nativeLogout(w http.ResponseWriter, r *http.Request) {
+
+	var someBody Logout 
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&someBody)
+	panik(err)
+
+	if checkIfExists("native_user_keys", "sessionid", someBody.Session_Key) {
+		deleteNativeSession(someBody.Session_Key)
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Println("nativeLogout: Delete was maybe succcessfull...?")
+	} else {
+		fmt.Println("nativeLogout: user key did not exist: |", someBody.Session_Key ,"|")
+	}
+
+
+}
+
+func netherPortalCount(writer http.ResponseWriter, request *http.Request) {
+	db := create_DB_Connection()
+	sql_string := "SELECT COUNT(id) FROM kingtest;"
+	var count int
+	err := db.QueryRow(sql_string).Scan(&count)
+	panik(err)
+
+	message := messageJSONxx("count", strconv.Itoa(count))
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Write(message)
+	db.Close()
+
+}
+func vecNetherPortals(writer http.ResponseWriter, request *http.Request) {
+	db := create_DB_Connection()
+	//	where_condition: r.URL.Query()["password"][0],
+	orderby := request.URL.Query()["offset"][0]
+	limit := request.URL.Query()["limit"][0]
+	sql_string := fmt.Sprintf(`SELECT * FROM netherportals WHERE id > %s ORDER BY id LIMIT %s`, orderby, limit)
+	rows, err := db.Query((sql_string))
+	panik(err)
+
+	key, err := strconv.Atoi(orderby)
+	panik(err)
+	portals := make(map[string]NetherPortal, 5)
+	for rows.Next() {
+		var portal NetherPortal
+		err = rows.Scan(
+			&portal.Id,
+			&portal.OverWorld.Xcord, 
+			&portal.OverWorld.Ycord, 
+			&portal.OverWorld.Zcord, 
+
+			&portal.Nether.Xcord, 
+			&portal.Nether.Ycord, 
+			&portal.Nether.Zcord, 
+
+			&portal.OverWorld.Locale,
+			&portal.OverWorld.Owner,
+			&portal.OverWorld.Notes,
+			&portal.OverWorld.True_Name,
+
+			&portal.Nether.Locale,
+			&portal.Nether.Owner,
+			&portal.Nether.Notes,
+			&portal.Nether.True_Name,
+
+			&portal.Username,
+		)
+		panik(err)
+		portals[strconv.Itoa(key)] = portal
+		key = key + 1
+	}
+	somePortals, err := json.Marshal(portals)
+	panik(err)
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Write(somePortals)
+	//somePortal, err := json.Marshal(portal)
+	//panik(err)
+
+
+}
+
+
+//var portal NetherPortal
+//sql_string := dbRead2(crud)
+//fmt.Println("MY CUSTOM SQL STRING", sql_string)
+//err := db.QueryRow(sql_string).Scan(
+//	&portal.Id,
+//	&portal.OverWorld.Xcord, 
+//	&portal.OverWorld.Ycord, 
+//	&portal.OverWorld.Zcord, 
+//
+//	&portal.Nether.Xcord, 
+//	&portal.Nether.Ycord, 
+//	&portal.Nether.Zcord, 
+//
+//	&portal.OverWorld.Locale,
+//	&portal.OverWorld.Owner,
+//	&portal.OverWorld.Notes,
+//	&portal.OverWorld.True_Name,
+//
+//	&portal.Nether.Locale,
+//	&portal.Nether.Owner,
+//	&portal.Nether.Notes,
+//	&portal.Nether.True_Name,
+//
+//	&portal.Username,
+//)
+
+
+
+
+//rows, err := db.Query(sql_string)
+//	panik(err)
+//	var inc int = 0
+//	for rows.Next() {
+//		var name string
+//		err = rows.Scan(&name)
+//		panik(err)
+//
+//		arrayOfNames[strconv.Itoa(inc)] = name
+//		inc = inc + 1	
+//	}
+//	db.Close()
+//
+//	return arrayOfNames
+//}
+
+
 
 func corsHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

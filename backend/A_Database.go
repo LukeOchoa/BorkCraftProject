@@ -303,6 +303,14 @@ func (nativeProfile *nativenProfile) Decode(reader io.Reader) {
 	err := decoder.Decode(&nativeProfile)
 	panik(err)
 }
+
+func (nativeProfile *NativeProfile) Decode(reader io.Reader) {
+	decoder := json.NewDecoder(reader)
+	err := decoder.Decode(&nativeProfile)
+	panik(err)
+}
+
+
 func (nativeKey *NativeKey) Encode() []byte {
 	var buffer bytes.Buffer
 	json.NewEncoder(&buffer).Encode(&nativeKey)
@@ -460,6 +468,40 @@ func dbRead(crud Crud) string {
 		sql_create = sql_create + sql_part + `;`
 	}
 	fmt.Println(sql_create)
+	return sql_create
+}
+
+func doThings1(anArray []string) string {
+	lenn := len(anArray)
+	var stringy string = ""
+	if lenn > 1 {
+		for key, value := range anArray{
+			if key != (lenn - 1) {
+				stringy = stringy + (value + ", ")
+			} else {
+				stringy = stringy + value
+			}
+		}
+	} else if lenn == 1 {
+		stringy = anArray[0]
+	}
+	return stringy
+}
+func dbRead2(crud Crud) string {
+	table := crud.table
+
+	var columns string = doThings1(crud.column)
+	//var column_value string = doThings1(crud.column_value)
+	var where string = crud.where
+	var where_condition = crud.where_condition 
+
+	var sql_create string
+	if crud.where != "" {
+		sql_create = fmt.Sprintf(`SELECT %s FROM %s WHERE %s='%s';`, columns, table, where, where_condition)
+	} else {
+		sql_create = fmt.Sprintf(`SELECT %s FROM %s;`, columns, table)
+	}
+
 	return sql_create
 }
 
