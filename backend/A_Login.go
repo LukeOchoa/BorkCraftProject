@@ -166,10 +166,15 @@ func main() {
 	http.HandleFunc("/netherportalcount", netherPortalCount)
 	http.Handle("/netherportalcountcors", corsHandler(http.HandlerFunc(netherPortalCount)) )
 	http.Handle("/vecnetherportals", corsHandler(http.HandlerFunc(vecNetherPortals)))
+	http.Handle("/savenetherportals", corsHandler(http.HandlerFunc(saveNetherPortals)))
+	//http.Handle("/getnetherportalimages", corsHandler(http.HandlerFunc(getNetherPortalImages)))
+	// this commented out route should and maybe does exist on the AWS S3 Golang Server
+	http.Handle("/getnetherportalimagenames", corsHandler(http.HandlerFunc(getNetherPortalImageNames)))
 
 
 
 	http.ListenAndServe(":8123", nil)
+	// end of main jump for vim
 }
 
 /*
@@ -236,6 +241,7 @@ func sessionTimeLeft(w http.ResponseWriter, r *http.Request) {
 			difference := panikReturnInt(strconv.Atoi(theTimeMap[key])) - panikReturnInt(strconv.Atoi(theTimeNowMap[key]))
 			theTimeMap[key]	= strconv.Itoa(difference)
 		}
+
 		theTimeJson, err := json.Marshal(theTimeMap)
 		panik(err)
 
@@ -1196,53 +1202,99 @@ func vecNetherPortals(writer http.ResponseWriter, request *http.Request) {
 
 }
 
+func saveNetherPortals(writer http.ResponseWriter, request *http.Request) {
+	var netherPortal NetherPortal
 
-//var portal NetherPortal
-//sql_string := dbRead2(crud)
-//fmt.Println("MY CUSTOM SQL STRING", sql_string)
-//err := db.QueryRow(sql_string).Scan(
-//	&portal.Id,
-//	&portal.OverWorld.Xcord, 
-//	&portal.OverWorld.Ycord, 
-//	&portal.OverWorld.Zcord, 
-//
-//	&portal.Nether.Xcord, 
-//	&portal.Nether.Ycord, 
-//	&portal.Nether.Zcord, 
-//
-//	&portal.OverWorld.Locale,
-//	&portal.OverWorld.Owner,
-//	&portal.OverWorld.Notes,
-//	&portal.OverWorld.True_Name,
-//
-//	&portal.Nether.Locale,
-//	&portal.Nether.Owner,
-//	&portal.Nether.Notes,
-//	&portal.Nether.True_Name,
-//
-//	&portal.Username,
-//)
+	body, err := ioutil.ReadAll(request.Body)
+	panik(err)
 
+	err = json.Unmarshal(body, &netherPortal)
+	panik(err)
 
+	var crud Crud = Crud {
+		table: "netherportals",
+		column: []string{"id" , "xcord_overworld" , "ycord_overworld", "zcord_overworld", "xcord_nether", "ycord_nether", "zcord_nether", "local_overworld", "owner_overworld", "notes_overworld", "overworld_true_name", "local_nether", "owner_nether", "notes_nether", "nether_true_name", "username"},
+		column_value: []string{
+			strconv.Itoa(netherPortal.Id),
 
+			strconv.Itoa(netherPortal.OverWorld.Xcord),
+			strconv.Itoa(netherPortal.OverWorld.Ycord),
+			strconv.Itoa(netherPortal.OverWorld.Zcord),
+			strconv.Itoa(netherPortal.Nether.Xcord),
+			strconv.Itoa(netherPortal.Nether.Ycord),
+			strconv.Itoa(netherPortal.Nether.Zcord),
+			netherPortal.OverWorld.Locale,
+			netherPortal.OverWorld.Owner,
+			netherPortal.OverWorld.Notes,
+			netherPortal.OverWorld.True_Name,
 
-//rows, err := db.Query(sql_string)
-//	panik(err)
-//	var inc int = 0
-//	for rows.Next() {
-//		var name string
-//		err = rows.Scan(&name)
-//		panik(err)
-//
-//		arrayOfNames[strconv.Itoa(inc)] = name
-//		inc = inc + 1	
-//	}
-//	db.Close()
-//
-//	return arrayOfNames
-//}
+			netherPortal.Nether.Locale,
+			netherPortal.Nether.Owner,
+			netherPortal.Nether.Notes,
+			netherPortal.Nether.True_Name,
 
+			netherPortal.Username,
+		},
+		where: "id",
+		where_condition: strconv.Itoa(netherPortal.Id),
+	}
+	var sql_update string
+	column := make([]string, 0)
+	for i:=0; i < 16; i++{
+		column = append(column, fmt.Sprintf(`%s = '%s',`, crud.column[i], crud.column_value[i]))
+	}
+    lell := len(column[15]) -1 
+	//fmt.Println("|", lell, len(column), "|")
+	column[15] = column[15][0:lell]
+	var bigstring string
+	for x:=0; x<len(column); x++ {
+		bigstring = bigstring + column[x] 
+	}
+	sql_update = fmt.Sprintf(`UPDATE %s SET %s WHERE %s = %s;`, crud.table, bigstring, crud.where, crud.where_condition)
+	db := create_DB_Connection()
+	fmt.Print("\n\n\n", sql_update)
+	_, err = db.Exec(sql_update)
+	panik(err)
 
+	writer.WriteHeader(http.StatusAccepted)
+}
+
+func getNetherPortalImageNames(writer http.ResponseWriter, request *http.Request) {
+
+	db := create_DB_Connection()
+	sql_read := fmt.Sprintf("SELECT * FROM netherportal_images WHERE true_name='%s';", request.URL.Query()["true_name"][0])
+	type ImageName struct {
+		Id int 
+		Name string
+		True_name string
+		Username string
+	}
+	imageNames := make(map[int]ImageName)
+	rows, err := db.Query(sql_read)
+	panik(err)
+	for rows.Next() {
+		var imageName ImageName
+		err = rows.Scan(
+			&imageName.Id,
+			&imageName.Name,
+			&imageName.True_name,
+			&imageName.Username,
+		)
+		imageNames[imageName.Id] = imageName
+		panik(err)
+	}
+
+	someImageNames, err := json.Marshal(&imageNames)
+	panik(err)
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Write(someImageNames)
+	db.Close()
+}
+
+// func getNetherPortalImages(writer http.ResponseWriter, request *http.Request) {
+
+// }
 
 func corsHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -522,6 +522,7 @@ func dbUpdate(crud Crud) {
 	_, err := db.Exec(sql_update)
 	if err != nil {
 		fmt.Println("Panic inside dbUpdatex()! at UPDATE statement...")
+		fmt.Print("\n\n\n |", sql_update, "| \n\n")
 		panic(err)
 	}
 	db.Close()
