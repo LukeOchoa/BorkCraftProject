@@ -3,6 +3,7 @@ package main
 import (
 	uuid "github.com/satori/go.uuid"
 	//"database/sql"
+
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -164,17 +166,20 @@ func main() {
 	http.Handle("/somelist", corsHandler(http.HandlerFunc(betterWhitelist)))
 	http.Handle("/sendmember", corsHandler(http.HandlerFunc(sendMemberByName)))
 	http.HandleFunc("/netherportalcount", netherPortalCount)
-	http.Handle("/netherportalcountcors", corsHandler(http.HandlerFunc(netherPortalCount)) )
+	http.Handle("/netherportalcountcors", corsHandler(http.HandlerFunc(netherPortalCount)))
 	http.Handle("/vecnetherportals", corsHandler(http.HandlerFunc(vecNetherPortals)))
 	http.Handle("/savenetherportals", corsHandler(http.HandlerFunc(saveNetherPortals)))
 	//http.Handle("/getnetherportalimages", corsHandler(http.HandlerFunc(getNetherPortalImages)))
 	// this commented out route should and maybe does exist on the AWS S3 Golang Server
+
 	http.Handle("/getnetherportalimagenames", corsHandler(http.HandlerFunc(getNetherPortalImageNames)))
-
-
+	http.Handle("/getaccessrights", corsHandler(http.HandlerFunc(get_access_rights)))
+	http.HandleFunc("/saveimagefromclient", saveImageFromClient)
+	http.HandleFunc("/deleteimagefromclient", deleteImageFromClient)
+	http.HandleFunc("/addnetherportal", addNetherPortal)
 
 	http.ListenAndServe(":8123", nil)
-	// end of main jump for vim
+	// end of main jump for vim jump
 }
 
 /*
@@ -239,7 +244,7 @@ func sessionTimeLeft(w http.ResponseWriter, r *http.Request) {
 		theTimeNowMap := getSessionTimeToMap(time.Now())
 		for key := range theTimeNowMap {
 			difference := panikReturnInt(strconv.Atoi(theTimeMap[key])) - panikReturnInt(strconv.Atoi(theTimeNowMap[key]))
-			theTimeMap[key]	= strconv.Itoa(difference)
+			theTimeMap[key] = strconv.Itoa(difference)
 		}
 
 		theTimeJson, err := json.Marshal(theTimeMap)
@@ -367,12 +372,12 @@ func native_key(profile nProfile) (bool, string) {
 ////}
 //}
 type Portal struct {
-	Xcord  int
-	Ycord  int
-	Zcord  int
-	Locale string
-	Owner  string
-	Notes  string
+	Xcord     int
+	Ycord     int
+	Zcord     int
+	Locale    string
+	Owner     string
+	Notes     string
 	True_Name string
 }
 
@@ -380,7 +385,7 @@ type NetherPortal struct {
 	Id        int
 	Nether    Portal
 	OverWorld Portal
-	Username string
+	Username  string
 }
 
 //func send_np_with_address_to_next_np(w http.ResponseWriter, r *http.Request) {
@@ -395,7 +400,6 @@ type NetherPortal struct {
 //}
 
 func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
-
 
 	type AllNetherPortals struct {
 		AllNetherPortals []NetherPortal
@@ -430,7 +434,6 @@ func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 			&netherPortal.Nether.Owner,
 			&netherPortal.Nether.Notes,
 			&netherPortal.Nether.True_Name,
-
 		)
 		if err != nil {
 			panic(err)
@@ -448,11 +451,11 @@ func netherPortals(w http.ResponseWriter, r *http.Request) { // RE-FACTOR
 	w.Write(jsonAllNetherPortals)
 
 }
-func internalWhitelist() map[string]string{
+func internalWhitelist() map[string]string {
 	db := create_DB_Connection()
 
-	crud := Crud {
-		table: "userprofile",
+	crud := Crud{
+		table:  "userprofile",
 		column: []string{"username"},
 	}
 	sql_string := dbRead(crud)
@@ -467,26 +470,24 @@ func internalWhitelist() map[string]string{
 		panik(err)
 
 		arrayOfNames[strconv.Itoa(inc)] = name
-		inc = inc + 1	
+		inc = inc + 1
 	}
 	db.Close()
 
 	return arrayOfNames
 }
 
-
 func betterWhitelist(w http.ResponseWriter, r *http.Request) {
 	db := create_DB_Connection()
 
-	crud := Crud {
-		table: "netherportals",
+	crud := Crud{
+		table:  "netherportals",
 		column: []string{"id, username"},
 	}
 	sql_string := dbRead(crud)
 
-	
 	type MemberId struct {
-		Id string
+		Id   string
 		Name string
 	}
 	type MemberIds struct {
@@ -500,16 +501,16 @@ func betterWhitelist(w http.ResponseWriter, r *http.Request) {
 	var inc int = 0
 	for rows.Next() {
 		var memberid MemberId
-		err = rows.Scan(&memberid.Id , &memberid.Name)
+		err = rows.Scan(&memberid.Id, &memberid.Name)
 		panik(err)
 
-		//arrayOfNames[strconv.Itoa(inc)] = 
+		//arrayOfNames[strconv.Itoa(inc)] =
 		//arrayOfNames = append(arrayOfNames, map[string]string {
 		//	"id": id,
 		//	"name": name,
 		//})
 		member_ids.Member_Ids = append(member_ids.Member_Ids, memberid)
-		inc = inc + 1	
+		inc = inc + 1
 	}
 	w.Header().Set("Content-Type", "application/json")
 	//w.Write(map_to_json(arrayOfNames))
@@ -526,12 +527,11 @@ func sendMemberByName(w http.ResponseWriter, r *http.Request) {
 	if checkIfExists("netherportals", "id", id) {
 
 		db := create_DB_Connection()
-		crud := Crud {
-			table: "netherportals", 
-			column: []string{"*",},
-			where: "id",
+		crud := Crud{
+			table:           "netherportals",
+			column:          []string{"*"},
+			where:           "id",
 			where_condition: id,
-
 		}
 		fmt.Println("MORE GAERBAGELKJSDL: |", crud)
 		var portal NetherPortal
@@ -539,13 +539,13 @@ func sendMemberByName(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("MY CUSTOM SQL STRING", sql_string)
 		err := db.QueryRow(sql_string).Scan(
 			&portal.Id,
-			&portal.OverWorld.Xcord, 
-			&portal.OverWorld.Ycord, 
-			&portal.OverWorld.Zcord, 
+			&portal.OverWorld.Xcord,
+			&portal.OverWorld.Ycord,
+			&portal.OverWorld.Zcord,
 
-			&portal.Nether.Xcord, 
-			&portal.Nether.Ycord, 
-			&portal.Nether.Zcord, 
+			&portal.Nether.Xcord,
+			&portal.Nether.Ycord,
+			&portal.Nether.Zcord,
 
 			&portal.OverWorld.Locale,
 			&portal.OverWorld.Owner,
@@ -747,16 +747,45 @@ func signup(w http.ResponseWriter, r *http.Request) {
 }
 
 type NativeProfile struct {
-		Username string
-		Password string
-		SessionKey string
+	Username   string
+	Password   string
+	SessionKey string
 }
+
+//sql := fmt.Sprintf(`SELECT netherportals FROM netherportal_access_rights WHERE username='%s'`, profile.Username)
+//db := create_DB_Connection()
+//var access_rights []string
+//err = db.QueryRow(sql).Scan(pq.Array(&access_rights))
+//panik(err)
+//db.Close()
+
+func get_access_rights(writer http.ResponseWriter, request *http.Request) {
+
+	username := request.URL.Query()["username"][0]
+
+	sql := fmt.Sprintf(`SELECT netherportals FROM netherportal_access_rights WHERE username='%s'`, username)
+	db := create_DB_Connection()
+	var access_rights []string
+	err := db.QueryRow(sql).Scan(pq.Array(&access_rights))
+	panik(err)
+	db.Close()
+
+	var access_rights_map = map[string][]string {
+		"access_rights": access_rights,
+	}
+	your_moms_payload, err := json.Marshal(access_rights_map)
+	panik(err)
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Write(your_moms_payload)
+
+}
+
+
 func native_login2(w http.ResponseWriter, r *http.Request) {
 
 	// if the user is logged in and has a key... how do you know if they still possess it?
 	// and if they still possess it, what do you do to not waste time sending another one?
 	// should they not prove their claim!?
-	
 
 	var profile NativeProfile
 	profile.Decode(r.Body)
@@ -785,6 +814,7 @@ func native_login2(w http.ResponseWriter, r *http.Request) {
 	// get their sessionid: 1) check if its expired, if so update the sessionid
 	//nativeProfile.Key = createNativeKey(profile.Username)
 
+
 	// check if session exists
 	if checkIfExists("native_user_keys", "username", profile.Username) {
 		// now find out if their session is still valid ([1])
@@ -799,6 +829,9 @@ func native_login2(w http.ResponseWriter, r *http.Request) {
 		panik(err)
 		//if theTime.After(now) {
 		fmt.Println("DIFFERENCE BETWEEN: ", theTime.Sub(now))
+
+			
+
 		if now.After(theTime) {
 			fmt.Println("After is true")
 			//if theTime.After(theTime.Add(time.Duration(time.Second * 30))) { // if not valid ([3.not valid])
@@ -815,6 +848,8 @@ func native_login2(w http.ResponseWriter, r *http.Request) {
 			// after creating a new session...
 			// send a message (along with the new key) through http to tell them how long they have left...!
 
+			// send user's "access rights" list
+			
 			var message = map[string]interface{}{
 				"key":  someKey,
 				"time": getSessionTimeToMap(theTime),
@@ -834,7 +869,7 @@ func native_login2(w http.ResponseWriter, r *http.Request) {
 			//} else {
 			//	newMessage = "Your getting a key!"
 			//}
-			 
+
 			var message = map[string]interface{}{
 				"key":  dbSessionKey,
 				"time": getSessionTimeToMap(theTime),
@@ -890,7 +925,6 @@ func native_login2(w http.ResponseWriter, r *http.Request) {
 	//}
 	// false check, do other things...?
 }
-
 
 func native_login(w http.ResponseWriter, r *http.Request) {
 
@@ -1024,7 +1058,6 @@ func native_login(w http.ResponseWriter, r *http.Request) {
 	// false check, do other things...?
 }
 
-
 func login(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("You made it to ghostLogin...!")
 	if r.Method == http.MethodGet {
@@ -1103,10 +1136,11 @@ func testingPoint3(w http.ResponseWriter, r *http.Request) {
 // TODO
 // Make a "Logout" function/route piece-o-crap
 type Logout struct {
-	Username string
-	Password string
+	Username    string
+	Password    string
 	Session_Key string
 }
+
 func logout(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("ping")
 	cookie, err := r.Cookie("session")
@@ -1123,7 +1157,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 func nativeLogout(w http.ResponseWriter, r *http.Request) {
 
-	var someBody Logout 
+	var someBody Logout
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&someBody)
 	panik(err)
@@ -1133,9 +1167,8 @@ func nativeLogout(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Println("nativeLogout: Delete was maybe succcessfull...?")
 	} else {
-		fmt.Println("nativeLogout: user key did not exist: |", someBody.Session_Key ,"|")
+		fmt.Println("nativeLogout: user key did not exist: |", someBody.Session_Key, "|")
 	}
-
 
 }
 
@@ -1162,19 +1195,20 @@ func vecNetherPortals(writer http.ResponseWriter, request *http.Request) {
 	panik(err)
 
 	key, err := strconv.Atoi(orderby)
+	//key = -1
 	panik(err)
 	portals := make(map[string]NetherPortal, 5)
 	for rows.Next() {
 		var portal NetherPortal
 		err = rows.Scan(
 			&portal.Id,
-			&portal.OverWorld.Xcord, 
-			&portal.OverWorld.Ycord, 
-			&portal.OverWorld.Zcord, 
+			&portal.OverWorld.Xcord,
+			&portal.OverWorld.Ycord,
+			&portal.OverWorld.Zcord,
 
-			&portal.Nether.Xcord, 
-			&portal.Nether.Ycord, 
-			&portal.Nether.Zcord, 
+			&portal.Nether.Xcord,
+			&portal.Nether.Ycord,
+			&portal.Nether.Zcord,
 
 			&portal.OverWorld.Locale,
 			&portal.OverWorld.Owner,
@@ -1192,6 +1226,9 @@ func vecNetherPortals(writer http.ResponseWriter, request *http.Request) {
 		portals[strconv.Itoa(key)] = portal
 		key = key + 1
 	}
+
+	fmt.Print("\n\n\n\n")
+	fmt.Println(portals)
 	somePortals, err := json.Marshal(portals)
 	panik(err)
 	writer.Header().Set("Content-Type", "application/json")
@@ -1199,21 +1236,57 @@ func vecNetherPortals(writer http.ResponseWriter, request *http.Request) {
 	//somePortal, err := json.Marshal(portal)
 	//panik(err)
 
-
 }
 
-func saveNetherPortals(writer http.ResponseWriter, request *http.Request) {
+func addNetherPortal(writer http.ResponseWriter, request *http.Request) {
 	var netherPortal NetherPortal
-
 	body, err := ioutil.ReadAll(request.Body)
 	panik(err)
-
 	err = json.Unmarshal(body, &netherPortal)
 	panik(err)
 
-	var crud Crud = Crud {
-		table: "netherportals",
-		column: []string{"id" , "xcord_overworld" , "ycord_overworld", "zcord_overworld", "xcord_nether", "ycord_nether", "zcord_nether", "local_overworld", "owner_overworld", "notes_overworld", "overworld_true_name", "local_nether", "owner_nether", "notes_nether", "nether_true_name", "username"},
+	db := create_DB_Connection()
+	defer db.Close()
+
+	//sql := fmt.Sprintf("SELECT true_name, count(true_name) FROM netherportal_images WHERE username='%s' GROUP BY true_name;", imageDetails.Username)
+
+	sql := fmt.Sprintf("SELECT username, count(username) FROM netherportals WHERE username='%s' GROUP BY username;", netherPortal.Username)
+	var count int
+	var x string
+	err = db.QueryRow(sql).Scan(&x, &count)
+	panik(err)
+
+	if count > 9 {
+		fmt.Println("addNetherPortal(): -> Too many profiles already...")
+		writer.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	err = dbCreateGivesErr(netherPortal_to_crud(netherPortal, true))
+	if err != nil {
+		fmt.Println("addNetherPortal(): -> Bad Request...!")
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println("addNetherPortal(): -> Good Request. We finished...!")
+	writer.WriteHeader(http.StatusAccepted)
+}
+
+func netherPortal_to_crud(netherPortal NetherPortal, change_id bool) Crud {
+	// if you want a new valid id param for this sql, the say (true==yes)
+	if change_id {
+		db := create_DB_Connection()
+		defer db.Close()
+
+		var err error
+		netherPortal.Id, err = strconv.Atoi(getValidIDstr("netherportals"))
+		panik(err)
+
+	}
+	var crud Crud = Crud{
+		table:  "netherportals",
+		column: []string{"id", "xcord_overworld", "ycord_overworld", "zcord_overworld", "xcord_nether", "ycord_nether", "zcord_nether", "local_overworld", "owner_overworld", "notes_overworld", "overworld_true_name", "local_nether", "owner_nether", "notes_nether", "nether_true_name", "username"},
 		column_value: []string{
 			strconv.Itoa(netherPortal.Id),
 
@@ -1235,20 +1308,60 @@ func saveNetherPortals(writer http.ResponseWriter, request *http.Request) {
 
 			netherPortal.Username,
 		},
-		where: "id",
+		where:           "id",
+		where_condition: strconv.Itoa(netherPortal.Id),
+	}
+
+	return crud
+}
+
+func saveNetherPortals(writer http.ResponseWriter, request *http.Request) {
+	var netherPortal NetherPortal
+
+	body, err := ioutil.ReadAll(request.Body)
+	panik(err)
+
+	err = json.Unmarshal(body, &netherPortal)
+	panik(err)
+
+	var crud Crud = Crud{
+		table:  "netherportals",
+		column: []string{"id", "xcord_overworld", "ycord_overworld", "zcord_overworld", "xcord_nether", "ycord_nether", "zcord_nether", "local_overworld", "owner_overworld", "notes_overworld", "overworld_true_name", "local_nether", "owner_nether", "notes_nether", "nether_true_name", "username"},
+		column_value: []string{
+			strconv.Itoa(netherPortal.Id),
+
+			strconv.Itoa(netherPortal.OverWorld.Xcord),
+			strconv.Itoa(netherPortal.OverWorld.Ycord),
+			strconv.Itoa(netherPortal.OverWorld.Zcord),
+			strconv.Itoa(netherPortal.Nether.Xcord),
+			strconv.Itoa(netherPortal.Nether.Ycord),
+			strconv.Itoa(netherPortal.Nether.Zcord),
+			netherPortal.OverWorld.Locale,
+			netherPortal.OverWorld.Owner,
+			netherPortal.OverWorld.Notes,
+			netherPortal.OverWorld.True_Name,
+
+			netherPortal.Nether.Locale,
+			netherPortal.Nether.Owner,
+			netherPortal.Nether.Notes,
+			netherPortal.Nether.True_Name,
+
+			netherPortal.Username,
+		},
+		where:           "id",
 		where_condition: strconv.Itoa(netherPortal.Id),
 	}
 	var sql_update string
 	column := make([]string, 0)
-	for i:=0; i < 16; i++{
+	for i := 0; i < 16; i++ {
 		column = append(column, fmt.Sprintf(`%s = '%s',`, crud.column[i], crud.column_value[i]))
 	}
-    lell := len(column[15]) -1 
+	lell := len(column[15]) - 1
 	//fmt.Println("|", lell, len(column), "|")
 	column[15] = column[15][0:lell]
 	var bigstring string
-	for x:=0; x<len(column); x++ {
-		bigstring = bigstring + column[x] 
+	for x := 0; x < len(column); x++ {
+		bigstring = bigstring + column[x]
 	}
 	sql_update = fmt.Sprintf(`UPDATE %s SET %s WHERE %s = %s;`, crud.table, bigstring, crud.where, crud.where_condition)
 	db := create_DB_Connection()
@@ -1264,10 +1377,10 @@ func getNetherPortalImageNames(writer http.ResponseWriter, request *http.Request
 	db := create_DB_Connection()
 	sql_read := fmt.Sprintf("SELECT * FROM netherportal_images WHERE true_name='%s';", request.URL.Query()["true_name"][0])
 	type ImageName struct {
-		Id int 
-		Name string
+		Id        int
+		Name      string
 		True_name string
-		Username string
+		Username  string
 	}
 	imageNames := make(map[int]ImageName)
 	rows, err := db.Query(sql_read)
@@ -1291,6 +1404,152 @@ func getNetherPortalImageNames(writer http.ResponseWriter, request *http.Request
 	writer.Write(someImageNames)
 	db.Close()
 }
+type ImageDetails struct {
+		Id int
+		Name string
+		True_Name string
+		Username string
+}
+func saveImageFromClient(writer http.ResponseWriter, request *http.Request) {
+
+	body, err := ioutil.ReadAll(request.Body)
+	panik(err)
+	var imageDetails ImageDetails
+	err = json.Unmarshal(body, &imageDetails)
+	panik(err)
+
+	db := create_DB_Connection()
+	defer db.Close()
+	var count int
+	sql := fmt.Sprintf("SELECT true_name, count(true_name) FROM netherportal_images WHERE username='%s' GROUP BY true_name;", imageDetails.Username)
+	err = db.QueryRow(sql).Scan(&count)
+	if err != nil && fmt.Sprint(err) != "sql: no rows in result set" {
+		fmt.Println("Internal Database error trying to get the total number of occurances for column: -> |true_name| == -> ", imageDetails.True_Name)
+		fmt.Println(sql)
+		fmt.Println("error: -> |", err, "|")
+		writer.WriteHeader(http.StatusForbidden)
+		return
+	}
+	if count < 9 {
+		sql = fmt.Sprintf(`INSERT INTO netherportal_images(id, name, true_name, username) VALUES(
+			%s, '%s', '%s', '%s')`, getValidIDstr("netherportal_images"), imageDetails.Name, imageDetails.True_Name, imageDetails.Username)
+
+		_, err = db.Exec(sql)
+		if err != nil {
+			fmt.Println("conflict...")
+			fmt.Println("|", err, "|")
+			fmt.Println(sql)
+			writer.WriteHeader(http.StatusConflict)
+			return
+		} else {
+			fmt.Println("Successfull record write")
+			writer.WriteHeader(http.StatusAccepted)
+			return
+		}
+	
+	} else {
+		fmt.Println("The database is full for this memeber on this location...")
+		writer.WriteHeader(http.StatusForbidden)
+		return
+	}
+}
+
+func deleteImageFromClient(writer http.ResponseWriter, request *http.Request) {
+
+	body, err := ioutil.ReadAll(request.Body)
+	panik(err)
+	var imageDetails ImageDetails
+	err = json.Unmarshal(body, &imageDetails)
+	panik(err)
+
+	db := create_DB_Connection()
+	defer db.Close()
+	sql := fmt.Sprintf(`
+		DELETE FROM netherportal_images WHERE name='%s';
+	`, imageDetails.Name)
+	_, err = db.Exec(sql)
+	if err != nil {
+		writer.WriteHeader(http.StatusForbidden)
+		panic(err)
+	}
+	fmt.Printf("The image: -> |%s| was successfully deleted", imageDetails.Name)
+	writer.WriteHeader(http.StatusAccepted)
+}
+
+//func saveImageFromClient(writer http.ResponseWriter, request *http.Request) {
+//
+//	type ImageDetails struct {
+//		Id int
+//		Name string
+//		True_Name string
+//		Username string
+//	}
+//
+//	type ImageAndDetailsSerializable struct {
+//		Image []byte
+//		Image_Type string
+//		Image_Details ImageDetails
+//	}	
+//	body, err := ioutil.ReadAll(request.Body)
+//	panik(err)
+//	var imageAndDetails ImageAndDetailsSerializable
+//	err = json.Unmarshal(body, &imageAndDetails)
+//	panik(err)
+//
+//	imageType := fmt.Sprintf("image/%s", imageAndDetails.Image_Type)
+//	image := bytes.NewReader(imageAndDetails.Image)
+//	image_name := imageAndDetails.Image_Details.True_Name + uuid.NewV4().String()
+//	url := fmt.Sprintf("http://localhost:1234/saveimage?name=%s", image_name)
+//	resp, err := http.Post(url, imageType, image)
+//	//r, err := http.NewRequest("POST", url, image)
+//	//panik(err)
+//	//r.Header.Add("Content-Type", imageType)
+//	//client := &http.Client{}
+//	//resp, err := client.Do(r)
+//
+//	if resp.StatusCode == 202 {
+//		if err != nil {
+//			// To save this information to the DataBase:
+//			// get and id, name, true_name, username
+//			// insert 
+//			// on success, continue
+//
+//			// check if there is too many pictures first...
+//			sql := "SELECT id FROM netherportal_images ORDER BY id DESC LIMIT 1;"
+//			db := create_DB_Connection()
+//			var count int
+//			err = db.QueryRow(sql).Scan(&count);
+//			panik(err)
+//			if count < 10 {
+//				sql := fmt.Sprintf(`INSERT INTO netherportal_images(id, name, true_name, username) Values(
+//					%d, %s, %s, %s,
+//				)`, imageAndDetails.Image_Details.Id, image_name, imageAndDetails.Image_Details.True_Name, imageAndDetails.Image_Details.Username)
+//
+//				_, err = db.Exec(sql)
+//				if err != nil {
+//					fmt.Println("conflict...")
+//					writer.WriteHeader(http.StatusConflict)
+//					return
+//				}
+//
+//			}
+//
+//			// then insert
+//
+//		}
+//	}
+//
+//	if resp.StatusCode == http.StatusOK && err != nil {
+//		writer.WriteHeader(http.StatusOK)
+//	} else {
+//		writer.WriteHeader(http.StatusForbidden)
+//	}
+//
+//
+//	//writer.WriteHeader(http.StatusOK)
+//
+//	fmt.Println("we got the image!!!!!!!!!!! -------> Success")
+//}
 
 // func getNetherPortalImages(writer http.ResponseWriter, request *http.Request) {
 
@@ -1327,3 +1586,10 @@ func corsHandler(h http.Handler) http.HandlerFunc {
 		//}
 	}
 }
+
+
+
+
+
+//map[0:{1 {444444 -66 -66 far away from the breaker not breaker i like it says the breaker World Spawn} {79 79 79 near the breaker breaker i dont like notes says the breaker Lunailah SpawnPoint} naliah@gmail.com} 
+//1:{2 {4444333 -678 -679 far from death not life floating in notes says the death Breaking Nether Spawn} {100 101 102 close to death life drowing in notes says the death Luke SpawnPoint} luke@gmail.com}]

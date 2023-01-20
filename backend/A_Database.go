@@ -423,7 +423,26 @@ func checkUsernameAvailability(profile nProfile) bool {
 
 	return !avail
 }
+func dbCreateGivesErr(crud Crud) error{
 
+	drop := removeBracketsFromArray
+
+	// Convert the arrays to formated strings
+	table := crud.table
+	columns := drop(MapString(crud.column, func(v string) string { return sql_Format(v, false) }))
+	columns_values := drop(MapString(crud.column_value, func(v string) string { return sql_Format(v, true) }))
+	reduceString(&columns, 2, "end")
+	reduceString(&columns_values, 2, "end")
+
+	sql_create := fmt.Sprintf(
+		`INSERT INTO %s(%s) VALUES(%s);`, table, columns, columns_values)
+
+	// Insert to database
+	db := create_DB_Connection()
+	_, err := db.Exec(sql_create)
+
+	return err
+}
 func dbCreate(crud Crud) {
 
 	drop := removeBracketsFromArray
